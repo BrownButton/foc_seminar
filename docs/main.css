@@ -44,9 +44,9 @@
 
     /**/
     .board { display: grid; gap: 12px; align-items: stretch; min-width: 1720px; } 
-    .row-head {display: flex; gap:10px; }
-    .row-head div:nth-child(1) {width:140px;}
-    .row-head div { width:360px; background: var(--panel); border:1px solid #1a2540; border-radius:12px; padding:10px; font-size:13px; color:#cfe0ff; font-weight:600; text-align:center; }
+    .row-head {display: grid; grid-template-columns: 95px repeat(4, minmax(280px, 1fr)); gap: 9px;}
+    /* .row-head div:nth-child(1) {width:140px;} */
+    .row-head div { background: var(--panel); border:1px solid #1a2540; border-radius:12px; padding:10px; font-size:13px; color:#cfe0ff; font-weight:600; text-align:center; }
 
 
     /* ===== Board (rows: transform, cols: views) ===== */
