@@ -224,10 +224,10 @@ function drawAlphaBeta3D(t){
             const P3 = project3D(WALL_X, FLOOR_Y, -2);
 
             if (i===0){
-                ctxA3.moveTo(px,py);
+                ctxA3.moveTo(P3[0],P3[1]);
             }
             else{
-                ctxA3.lineTo(px,py);
+                ctxA3.lineTo(P3[0],P3[1]);
             }
 
             if (i===N){
