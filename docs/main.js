@@ -122,7 +122,6 @@
     const dq3 = document.getElementById("dq3D"); const ctxD3 = dq3.getContext('2d');
     const dqS = document.getElementById("dqStatic"); const ctxDS = dqS.getContext('2d');
 
-    /*
     const inv_abT = document.getElementById("inv_alphaBetaTime"); const ctxIABT = inv_abT.getContext('2d');
     const inv_abS = document.getElementById("inv_alphaBeta"); const ctxIABS = inv_abS.getContext('2d');
     const inv_ab3 = document.getElementById("inv_alphaBeta3D"); const ctxIAB3 = inv_ab3.getContext('2d');
@@ -131,14 +130,9 @@
     const inv_uvwS = document.getElementById("inv_uvw"); const ctxIuvwS = inv_uvwS.getContext('2d');
     const inv_uvw3 = document.getElementById("inv_uvw3D"); const ctxIuvw3 = inv_uvw3.getContext('2d');
 
-    */
-
     function resizeCanvas() {
       const ratio = DPR();
-      /*
       [wave,ab,abT,ab3,uvw3,uvwS,dqT,dq3,dqS,inv_abT,inv_ab3,inv_abS,inv_uvwT,inv_uvwS,inv_uvw3].forEach(c=>{ const rect = c.getBoundingClientRect(); c.width = Math.max(1, Math.floor(rect.width * ratio)); c.height = Math.max(1, Math.floor(rect.height * ratio)); });
-      */
-      [wave,ab,abT,ab3,uvw3,uvwS,dqT,dq3,dqS].forEach(c=>{ const rect = c.getBoundingClientRect(); c.width = Math.max(1, Math.floor(rect.width * ratio)); c.height = Math.max(1, Math.floor(rect.height * ratio)); });
     }
       
     addEventListener('resize', resizeCanvas);
@@ -1088,13 +1082,13 @@
       drawParkStatic(t);
       drawPark3D(t);
 
-      // drawInvParkTime(t);
-      // drawInvParkStatic(t);
-      //drawInvPark3D(t);
+      drawInvParkTime(t);
+      drawInvParkStatic(t);
+      drawInvPark3D(t);
 
-      // drawInvClarkTime(t);
-      // drawInvClarkStatic(t);
-      //drawInvClark3D(t);
+      drawInvClarkTime(t);
+      drawInvClarkStatic(t);
+      drawInvClark3D(t);
 
       updateMath(t);
       updateMathUVW(t);
