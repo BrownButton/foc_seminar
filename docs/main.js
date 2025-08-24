@@ -1089,12 +1089,12 @@
       drawParkStatic(t);
       drawPark3D(t);
 
-      drawInvParkTime(t);
-      drawInvParkStatic(t);
+      // drawInvParkTime(t);
+      // drawInvParkStatic(t);
       //drawInvPark3D(t);
 
-      drawInvClarkTime(t);
-      drawInvClarkStatic(t);
+      // drawInvClarkTime(t);
+      // drawInvClarkStatic(t);
       //drawInvClark3D(t);
 
       updateMath(t);
