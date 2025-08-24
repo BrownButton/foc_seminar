@@ -199,7 +199,8 @@ function drawAlphaBeta3D(t){
         const [u,v,w] = uvwAt(ti);
         const [aa,bb] = clarke(u,v,w);
         //const px = aa * S - 110, py = -bb * S - 50; // p0[0], -p0[1]
-        const px = p0[0], py = -p0[1]; // p0[0], -p0[1]
+        //const px = p0[0], py = -p0[1]; // p0[0], -p0[1]
+        const px = p1[0], py = -p1[1]
         const P2 = project3D(0, 0, -2);
         const P3 = project3D(px, py, -2);
         if (i===0) ctxA3.moveTo(px,py); else ctxA3.lineTo(px,py);
