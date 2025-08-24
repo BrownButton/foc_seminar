@@ -142,11 +142,11 @@
       }
 
       
-      let arrScript=['main','uvw','clark','inv-uvw','inv-clark','init'];
+      let arrScript=['main','uvw','clark','park','inv-uvw','inv-clark','init'];
       for (const n of arrScript) {
         await loadScript(n); 
       }
-      if (typeof init === 'function') init();
+      if (typeof init === 'function') init(tick);
       
     });
     </script>

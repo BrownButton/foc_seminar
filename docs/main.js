@@ -137,12 +137,13 @@
       
     addEventListener('resize', resizeCanvas);
 
+
     let t0 = 0, tHold = 0;
-    function init(){
+    function init(func){
   
       resizeCanvas();
       t0 = performance.now();
-      callAnimeFrame();
+      requestAnimationFrame(func);
     }
 
     const deg2rad = d => d * Math.PI/180;
