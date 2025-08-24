@@ -143,8 +143,10 @@
 
       
       let arrScript=['main','uvw','clark','inv-uvw','inv-clark'];
-      arrScript.forEach(x=>{loadScript(x)});
-      init();
+      for (const n of arrScript) {
+        await loadScript(n); 
+      }
+      if (typeof init === 'function') init();
       
     });
     </script>
