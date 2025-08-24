@@ -186,7 +186,7 @@ function drawAlphaBeta3D(t){
         const [aa,bb] = clarke(u,v,w);
         const px = aa * S + p0[0], py = -bb * S + (-p0[1]); // p0[0], -p0[1]
         const P2 = project3D(0, 0, -2);
-        const P3 = project3D(px, py, -2);
+        const P3 = project3D(a, b, -2);
         if (i===0) ctxA3.moveTo(px,py); else ctxA3.lineTo(px,py);
         //if (i===0) ctxA3.moveTo(P3[0],P3[1]); else ctxA3.lineTo(P3[0],P3[1]);
         if (i===N){ a = P3[0]; b = P3[1]; }
