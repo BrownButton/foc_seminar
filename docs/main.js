@@ -142,7 +142,7 @@
     }
       
     addEventListener('resize', resizeCanvas);
-*/
+
     let t0 = 0, tHold = 0;
     function init(){
   
