@@ -175,20 +175,6 @@ function drawAlphaBeta3D(t){
     ctxA3.fillText(`β=${b.toFixed(3)}`, pBetaNow[0] - 6*DPR(), -pBetaNow[1]);
 
     // ---- 현재 파라미터 기준 한 주기 전체 궤적 (비누적) ----
-    // if (f > 1e-6){
-    //   for (let i=0; i<=N; i++){
-    //     const ti = t - T + (i/N)*T; // [t-T, t]
-    //     const [u,v,wv] = uvwAt(ti);
-    //     const [aa,bb] = clarke(u,v,wv);
-    //     const px = aa * S, py = -bb * S;
-    //     if (i===0) ctxIuvwS.moveTo(px,py); else ctxIuvwS.lineTo(px,py);
-    //     if (i===N){ a = aa; b = bb; }
-    //   }
-    //   ctxIuvwS.strokeStyle = '#9dd7ff'; ctxIuvwS.lineWidth = 1.6; ctxIuvwS.stroke();
-    // } else {
-    //   const [u,v,wv] = uvwAt(t); [a,b] = clarke(u,v,wv);
-    //   ctxIuvwS.beginPath(); ctxIuvwS.arc(a*S, -b*S, 3.5*DPR(), 0, Math.PI*2); ctxIuvwS.fillStyle = '#9dd7ff'; ctxIuvwS.fill();
-    // }
     const S = 50 * DPR();
     if (f > 1e-6){
     const T = 1/f;
@@ -198,9 +184,7 @@ function drawAlphaBeta3D(t){
         const ti = t - T + (i/N)*T;
         const [u,v,w] = uvwAt(ti);
         const [aa,bb] = clarke(u,v,w);
-        //const px = aa * S - 110, py = -bb * S - 50; // p0[0], -p0[1]
-        //const px = p0[0], py = -p0[1]; // p0[0], -p0[1]
-        const px = p1[0], py = -p1[1]
+        const px = aa * S - p0[0], py = -bb * S - (-p0[1]); // p0[0], -p0[1]
         const P2 = project3D(0, 0, -2);
         const P3 = project3D(px, py, -2);
         if (i===0) ctxA3.moveTo(px,py); else ctxA3.lineTo(px,py);
