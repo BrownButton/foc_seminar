@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="./main.css">
+</head>
+
+
+<body>
+    <div class="wrap" style="padding:0px;">
+        <section>
+            <div class="board-scroller">
+                <div class="board">
+                    <div class="row-head">
+                        <!-- Row: uvw -->
+                        <div class="rowhead">clark</div>
+                        <div class="cell card canvas-card">
+                            <span class="caption">시간영역 α(t), β(t)</dspaniv>
+                            <canvas id="alphabetaTime"></canvas>
+                        </div>
+                        <div class="cell card canvas-card">
+                            <span class="caption">Clarke αβ 벡터 (정지 좌표계) — X: α, Y: β</span>
+                            <canvas id="alphaBeta"></canvas>
+                        </div>
+                        <div class="cell card canvas-card">
+                            <span class="caption">αβ + 시간축 3D (≈30°)</span>
+                            <canvas id="alphaBeta3D"></canvas>
+                        </div>
+                        <div class="cell card">
+                            <h2>Clarke 변환 수식</h2>
+                            <div class="mat"><pre id="matText"></pre></div>
+                            <div id="deltaBox" class="delta" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+    <script src="./main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,61 @@
+:root {
+      --bg: #0b1220; --panel: #121a2b; --ink: #e6edf6; --muted:#9fb0ca; --accent:#4aa3ff; --grid:#23314f; --good:#FFCC00; --warn:#ffb020; --bad:#ff5d6c;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin:0; background: var(--bg); color: var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji; }
+    header { padding: 16px 20px; border-bottom: 1px solid #18223a; position: sticky; top:0; background: linear-gradient(180deg,var(--bg),rgba(11,18,32,0.8)); backdrop-filter: blur(6px); z-index: 2; }
+    header h1 { margin: 0; font-size: 20px; letter-spacing: .2px; }
+    header p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+    .wrap { display: grid; grid-template-columns: 520px 1fr; gap: 16px; padding: 16px; }
+    @media (max-width: 1180px){ .wrap { grid-template-columns: 1fr; } }
+
+    .card { background: var(--panel); border: 1px solid #1a2540; border-radius: 14px; padding: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+    .card h2 { margin: 0 0 8px; font-size: 16px; letter-spacing:.2px; }
+
+    /* label | range | number | reset */
+    .row { display: grid; grid-template-columns: 1.2fr 2fr 110px 84px; align-items: center; gap: 10px; margin: 10px 0; }
+    .row label { font-size: 13px; color: var(--muted); }
+    .row input[type="range"] { width: 100%; }
+    .row input[type="number"] { width: 100%; background:#0f162a; color:var(--ink); border:1px solid #1c2a49; border-radius: 8px; padding:6px 8px; font-size:12px; }
+    .row button { width: 84px; background:#0e172b; border:1px solid #203156; color:#cfe0ff; border-radius:8px; padding:6px 8px; cursor:pointer; font-size:12px; }
+    .row button:hover { filter: brightness(1.12); }
+
+    .grid-3 { display: grid; grid-template-columns: 1fr; gap:8px; }
+    .grid-3 .group { border:1px solid #1b2949; border-radius:12px; padding:10px; background:#0c1425; }
+    .group h3 { margin:0 0 6px; font-size:13px; color:#cfe0ff; font-weight:600; }
+
+    .pill { display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius: 999px; background:#0f1628; border:1px solid #1c2a49; font-size: 12px; color: var(--muted); }
+    .pill input { transform: translateY(1px); }
+
+    .canvas-wrap { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 1080px){ .canvas-wrap { grid-template-columns: 1fr; } }
+    .canvas-card { position: relative; }
+    canvas { width: 100%; height: 320px; border-radius: 12px; background: #0b1220; display:block; }
+    .caption { position:absolute; top:10px; left:12px; font-size: 12px; color: var(--muted); background: rgba(10,16,28,.6); padding:4px 8px; border-radius: 999px; border:1px solid #213154; }
+
+    .mat { background:#0c1425; border:1px solid #1b2949; border-radius: 12px; padding: 12px; overflow:auto; }
+    .mat pre { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12.5px; line-height: 1.45; color:#b8c7e6; }
+    .badge { font-size: 11px; color:#cfe0ff; padding: 4px 6px; border-radius: 6px; border:1px solid #203156; background:#0e172b; }
+
+    .delta { margin-top:8px; font-size:12px; color:#cfe0ff; display:flex; flex-wrap:wrap; gap:10px; }
+    .delta span { background:#0e172b; border:1px solid #203156; padding:4px 6px; border-radius:6px; }
+
+    /**/
+    .board { display: grid; gap: 12px; align-items: stretch; min-width: 1720px; } 
+    .row-head {display: flex; gap:10px; }
+    .row-head div:nth-child(1) {width:140px;}
+    .row-head div { width:360px; background: var(--panel); border:1px solid #1a2540; border-radius:12px; padding:10px; font-size:13px; color:#cfe0ff; font-weight:600; text-align:center; }
+
+
+    /* ===== Board (rows: transform, cols: views) ===== */
+    /*
+    .board-scroller { overflow: auto; padding-bottom: 6px; }
+    .board { display: grid; grid-template-columns: 140px repeat(4, minmax(360px, 1fr)); gap: 12px; align-items: stretch; min-width: 1720px; }
+    .head { background: var(--panel); border:1px solid #1a2540; border-radius:12px; padding:10px; font-size:13px; color:#cfe0ff; font-weight:600; text-align:center; }
+    .rowhead { background: var(--panel); border:1px solid #1a2540; border-radius:12px; padding:10px; font-size:13px; color:#cfe0ff; font-weight:700; text-align:center; text-transform: uppercase; }
+    .cell { }
+    .placeholder { display:flex; align-items:center; justify-content:center; color:#9fb0ca; min-height: 300px; }
+    .cell.canvas-card canvas { height: 300px; }
+    */

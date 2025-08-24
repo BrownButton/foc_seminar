@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="./main.css">
+</head>
+
+
+<body>
+    <div class="wrap" style="padding:0px;">
+        <section>
+            <div class="board-scroller">
+                <div class="board">
+                    <div class="row-head">
+                        <!-- Row: park (placeholder) -->
+                        <div class="rowhead">park</div>
+                            <div class="cell card canvas-card">
+                                <span class="caption">시간영역 d(t), q(t)</span>
+                                <canvas id="dqTime"></canvas>
+                            </div>
+                            <div class="cell card canvas-card">
+                                <span class="caption">Park dq 벡터 (정지 좌표계) — X: d, Y: q</span>
+                                <canvas id="dqStatic"></canvas>
+                            </div>
+                            <div class="cell card canvas-card">
+                                <span class="caption">dq + 시간축 3D (≈30°)</span>
+                                <canvas id="dq3D"></canvas>
+                            </div>
+                            <div class="cell card">
+                                <h2>Park 변환 수식</h2>
+                                <div class="mat"><pre id="matPark"></pre></div>
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+    <script src="./main.js"></script>
+</body>
+
+</html>

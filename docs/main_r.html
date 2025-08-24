@@ -1,0 +1,136 @@
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./main.css">
+  <title>UVW → αβ (Clarke) 실시간 시각화</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  
+</head>
+<body>
+  <header>
+    <h1>Filed Oriented Control (FOC) 시각화</h1>
+    <p>파라미터를 조절하여 <span class="badge">UVW</span> 정현파가 <span class="badge">Clarke αβ</span>로 변환되는 과정을 확인하세요.</p>
+  </header>
+
+  <div class="wrap">
+    <!-- Controls -->
+    <section class="card">
+      <h2>입력 파라미터</h2>
+
+      <div class="row" data-bind="amp">
+        <label>기본 진폭 A [V]</label>
+        <input id="amp" type="range" min="0" max="5" step="0.01" value="1" />
+        <input id="amp_num" type="number" step="0.01" />
+        <button id="amp_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="freq">
+        <label>기본 주파수 f [Hz]</label>
+        <input id="freq" type="range" min="0" max="20" step="0.01" value="1" />
+        <input id="freq_num" type="number" step="0.01" />
+        <button id="freq_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="tscale">
+        <label>시간 스케일 (늘리면 느려짐)</label>
+        <input id="tscale" type="range" min="0.25" max="4" step="0.05" value="1" />
+        <input id="tscale_num" type="number" step="0.05" />
+        <button id="tscale_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="cycles3D">
+        <label>3D 주기 수 (cycles)</label>
+        <input id="cycles3D" type="range" min="1" max="10" step="0.5" value="1.5" />
+        <input id="cycles3D_num" type="number" step="0.5" />
+        <button id="cycles3D_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="fe">
+        <label>전기각 주파수 fₑ [Hz]</label>
+        <input id="fe" type="range" min="0" max="50" step="0.01" value="1" />
+        <input id="fe_num" type="number" step="0.01" />
+        <button id="fe_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="theta0">
+        <label>전기각 오프셋 θ₀ [deg]</label>
+        <input id="theta0" type="range" min="-180" max="180" step="1" value="0" />
+        <input id="theta0_num" type="number" step="1" />
+        <button id="theta0_reset">기본값</button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #1a2540;margin:14px 0;">
+      <h2>상별 개별 조정</h2>
+      <div class="grid-3">
+        <div class="group">
+          <h3>U 상</h3>
+          <div class="row" data-bind="ampU"><label>U 진폭 [V]</label><input id="ampU" type="range" min="0" max="5" step="0.01" value="1" /><input id="ampU_num" type="number" step="0.01" /><button id="ampU_reset">기본값</button></div>
+          <div class="row" data-bind="phiU"><label>U 위상 [deg]</label><input id="phiU" type="range" min="-180" max="180" step="1" value="0" /><input id="phiU_num" type="number" step="1" /><button id="phiU_reset">기본값</button></div>
+          <div class="row" data-bind="offU"><label>U 오프셋 [V]</label><input id="offU" type="range" min="-2" max="2" step="0.01" value="0" /><input id="offU_num" type="number" step="0.01" /><button id="offU_reset">기본값</button></div>
+        </div>
+        <div class="group">
+          <h3>V 상</h3>
+          <div class="row" data-bind="ampV"><label>V 진폭 [V]</label><input id="ampV" type="range" min="0" max="5" step="0.01" value="1" /><input id="ampV_num" type="number" step="0.01" /><button id="ampV_reset">기본값</button></div>
+          <div class="row" data-bind="phiV"><label>V 위상 [deg]</label><input id="phiV" type="range" min="-180" max="180" step="1" value="-120" /><input id="phiV_num" type="number" step="1" /><button id="phiV_reset">기본값</button></div>
+          <div class="row" data-bind="offV"><label>V 오프셋 [V]</label><input id="offV" type="range" min="-2" max="2" step="0.01" value="0" /><input id="offV_num" type="number" step="0.01" /><button id="offV_reset">기본값</button></div>
+        </div>
+        <div class="group">
+          <h3>W 상</h3>
+          <div class="row" data-bind="ampW"><label>W 진폭 [V]</label><input id="ampW" type="range" min="0" max="5" step="0.01" value="1" /><input id="ampW_num" type="number" step="0.01" /><button id="ampW_reset">기본값</button></div>
+          <div class="row" data-bind="phiW"><label>W 위상 [deg]</label><input id="phiW" type="range" min="-180" max="180" step="1" value="120" /><input id="phiW_num" type="number" step="1" /><button id="phiW_reset">기본값</button></div>
+          <div class="row" data-bind="offW"><label>W 오프셋 [V]</label><input id="offW" type="range" min="-2" max="2" step="0.01" value="0" /><input id="offW_num" type="number" step="0.01" /><button id="offW_reset">기본값</button></div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">
+        <label class="pill"><input id="lock120" type="checkbox" checked /> 120° 간격 고정 (3상 대칭)</label>
+        <label class="pill"><input id="sumZero" type="checkbox" checked /> U + V + W = 0 강제</label>
+        <label class="pill"><input id="normalize" type="checkbox" checked /> αβ 전력불변 정규화 (2/3 계수)</label>
+        <label class="pill"><input id="syncTheta" type="checkbox" checked /> θe = f 동기화</label>
+        <label class="pill"><input id="freeze" type="checkbox" /> 시간 정지 (t = const)</label>
+      </div>
+    </section>
+
+    <!-- Plots & math -->
+    <section>
+      <div class="board-scroller">
+
+        <div class="board">
+            <div class="row-head">
+                <div class="head"></div>
+                <div class="head">시간영역 (Time domain)</div>
+                <div class="head">정지좌표계</div>
+                <div class="head">시간영역의 파형 3D</div>
+                <div class="head">수식</div>
+            </div>
+            <div class="row-head row-include" data-include="./uvw.html">
+            </div>    
+            <div class="row-head row-include" data-include="./clark.html">
+            </div>    
+            <div class="row-head row-include" data-include="./park.html">
+            </div>    
+            <div class="row-head row-include" data-include="./clark.html">
+            </div>    
+            <div class="row-head row-include" data-include="./uvw.html">
+            </div>    
+        </div>
+
+        
+      
+
+        </div>
+    </section>
+  </div>
+
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+    for (const slot of document.querySelectorAll(".row-include[data-include]")) {
+        const url = slot.getAttribute("data-include");
+        const html = await (await fetch(url, {cache:"no-cache"})).text();
+        slot.outerHTML = html; // 조각의 최상단은 <div class="row">로
+    }
+    });
+    </script>
+
+</body>
+</html>
