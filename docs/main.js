@@ -1062,9 +1062,9 @@
 `  u=${u.toFixed(3)}, v=${v.toFixed(3)}, w=${w.toFixed(3)} ${sumZero.checked? ' (※ U+V+W=0 강제중)':''}
 `+
 `  α=${a.toFixed(4)}, β=${b.toFixed(4)}`;
-      ele("matText").textContent = text;
+      document.getElementById("matText").textContent = text;
 
-      const box = ele("deltaBox");
+      const box = document.getElementById("deltaBox");
       if (deltaActive && deltaRef){
         const du = (u-deltaRef.u).toFixed(3), dv=(v-deltaRef.v).toFixed(3), dw=(w-deltaRef.w).toFixed(3);
         const da = (a-deltaRef.a).toFixed(4), db=(b-deltaRef.b).toFixed(4);
