@@ -113,7 +113,7 @@ function drawAlphaBeta(t){
 }
 
 function drawAlphaBeta3D(t){
-    const w = ctxA3.canvas.width, h = ctxA3.canvas.height; //drawGrid(ctxA3);
+    const w = ctxA3.canvas.width, h = ctxA3.canvas.height;
     drawAxes3D(ctxA3);
 
     const cx = w/2, cy = h/2; ctxA3.save(); ctxA3.translate(cx, cy);
@@ -128,34 +128,63 @@ function drawAlphaBeta3D(t){
     ctxA3.beginPath();
 
     for (let i=0; i<=N*2; i++){
-    const ti = t - Tvis + (i/N)*Tvis;
-    const [u,v,wv] = uvwAt(ti); const [aa,bb] = clarke(u,v,wv);
-    const P = project3D(WALL_X, aa, -i/N);
-    const sx = P[0], sy = -P[1];
-    if (i===0) ctxA3.moveTo(sx, sy); else ctxA3.lineTo(sx, sy);
-    if (i===N*2){ a=aa; }
+        const ti = t - Tvis + (i/N)*Tvis;
+        const [u,v,wv] = uvwAt(ti); const [aa,bb] = clarke(u,v,wv);
+        const P = project3D(WALL_X, aa, -i/N);
+        const sx = P[0], sy = -P[1];
+        if (i===0) {
+            ctxA3.moveTo(sx, sy);
+        } 
+        else {
+            ctxA3.lineTo(sx, sy);
+        }
+
+        if (i===N*2) {
+            a=aa;
+        }
     }
-    ctxA3.strokeStyle = COLOR_ALPHA; ctxA3.lineWidth = 2; ctxA3.stroke();
+    ctxA3.strokeStyle = COLOR_ALPHA;
+    ctxA3.lineWidth = 2;
+    ctxA3.stroke();
 
     // β(t) on floor @ y = -FLOOR_Y (vary x over β, depth over time)
     ctxA3.beginPath();
     for (let i=0; i<=N*2; i++){
-    const ti = t - Tvis + (i/N)*Tvis;
-    const [u,v,wv] = uvwAt(ti); const [aa,bb] = clarke(u,v,wv);
-    const P = project3D(bb, -FLOOR_Y, -i/N);
-    const sx = P[0], sy = -P[1];
-    if (i===0) ctxA3.moveTo(sx, sy); else ctxA3.lineTo(sx, sy);
-    if (i===N*2){ b=bb; }
+        const ti = t - Tvis + (i/N)*Tvis;
+        const [u,v,wv] = uvwAt(ti);
+        const [aa,bb] = clarke(u,v,wv);
+        const P = project3D(bb, -FLOOR_Y, -i/N);
+        const sx = P[0];
+        const sy = -P[1];
+
+        if (i===0) {
+            ctxA3.moveTo(sx, sy);
+        }
+        else {
+            ctxA3.lineTo(sx, sy);
+        } 
+        if (i===N*2) {
+            b=bb;
+        }
     }
     ctxA3.strokeStyle = COLOR_BETA; ctxA3.lineWidth = 2; ctxA3.stroke();
 
     // Current rotating vector in αβ plane @ z=1
-    const p0 = project3D(0,0,-2), p1 = project3D(a,b,-2);
-    ctxA3.beginPath(); ctxA3.moveTo(p0[0], -p0[1]); ctxA3.lineTo(p1[0], -p1[1]);
-    ctxA3.strokeStyle = '#FFCC00'; ctxA3.lineWidth = 2.4; ctxA3.stroke();
+    const p0 = project3D(0,0,-2);
+    const p1 = project3D(a,b,-2);
+
+    ctxA3.beginPath();
+    ctxA3.moveTo(p0[0], -p0[1]);
+    ctxA3.lineTo(p1[0], -p1[1]);
+
+    ctxA3.strokeStyle = '#FFCC00';
+    ctxA3.lineWidth = 2.4;
+
+    ctxA3.stroke();
     ctxA3.beginPath(); 
     ctxA3.arc(p1[0], -p1[1], 4.5*DPR(), 0, Math.PI*2); 
-    ctxA3.fillStyle = '#FFCC00'; ctxA3.fill();
+    ctxA3.fillStyle = '#FFCC00';
+    ctxA3.fill();
 
     // Guides from vector tip to the α-wall and β-floor at the current time (z=1)
     // const pAlphaNow = project3D(WALL_X, a, 0);
@@ -176,28 +205,47 @@ function drawAlphaBeta3D(t){
 
     // ---- 현재 파라미터 기준 한 주기 전체 궤적 (비누적) ----
     const S = 50 * DPR();
-    if (f > 1e-6){
-    const T = 1/f;
-    const N = 720;
-    ctxA3.beginPath();
-    for (let i=0; i<=N; i++){
-        const ti = t - T + (i/N)*T;
-        const [u,v,w] = uvwAt(ti);
-        const [aa,bb] = clarke(u,v,w);
-        const px = aa * S + p0[0], py = -bb * S + (-p0[1]); // p0[0], -p0[1]
-        const P2 = project3D(0, 0, -2);
-        const P3 = project3D(a, b, -2);
-        if (i===0) ctxA3.moveTo(px,py); else ctxA3.lineTo(px,py);
-        //if (i===0) ctxA3.moveTo(P3[0],P3[1]); else ctxA3.lineTo(P3[0],P3[1]);
-        if (i===N){ a = P3[0]; b = P3[1]; }
-    }
-    ctxA3.strokeStyle = '#9dd7ff'; ctxA3.lineWidth = 1.6; ctxA3.stroke();
-    } else {
-    const [u,v,wv] = uvwAt(t); [a,b] = clarke(u,v,wv);
-    ctxA3.beginPath(); 
-    ctxA3.arc(-b*S, a*S, 3.5*DPR(), 0, Math.PI*2); 
-    ctxA3.fillStyle = '#9dd7ff'; ctxA3.fill();
-    }
+    if (f > 1e-6) {
+        const T = 1/f;
+        const N = 720;
 
+        ctxA3.beginPath();
+        for (let i=0; i<=N; i++){
+            const ti = t - T + (i/N)*T;
+
+            const [u,v,w] = uvwAt(ti);
+            const [aa,bb] = clarke(u,v,w);
+
+            const px = aa * S + p0[0];
+            const py = -bb * S + (-p0[1]);
+
+            const P2 = project3D(0, 0, -2);
+            //const P3 = project3D(a, b, -2);
+            const P3 = project3D(WALL_X, FLOOR_Y, -2);
+
+            if (i===0){
+                ctxA3.moveTo(px,py);
+            }
+            else{
+                ctxA3.lineTo(px,py);
+            }
+
+            if (i===N){
+                a = P3[0];
+                b = P3[1];
+            }
+        }
+        ctxA3.strokeStyle = '#9dd7ff';
+        ctxA3.lineWidth = 1.6;
+        ctxA3.stroke();
+    }
+    else {
+        const [u,v,wv] = uvwAt(t);
+        const [a,b] = clarke(u,v,wv);
+
+        ctxA3.beginPath(); 
+        ctxA3.arc(-b*S, a*S, 3.5*DPR(), 0, Math.PI*2); 
+        ctxA3.fillStyle = '#9dd7ff'; ctxA3.fill();
+    }
     ctxA3.restore();
 }
