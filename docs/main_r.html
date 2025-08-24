@@ -132,7 +132,7 @@
     let loadScript=(name)=>{
       return new Promise((resolve, reject) => {
           const s = document.createElement('script');
-          s.src = `./${name}`;
+          s.src = `./${name}.js`;
           s.onload = resolve;
           s.onerror = reject;
           document.head.appendChild(s);
@@ -147,8 +147,7 @@
       }
 
       
-      let arrScript=['main.js','uvw.js'];
-
+      let arrScript=['main','uvw','clark'];
       arrScript.forEach(x=>{loadScript(x)});
       init();
       
