@@ -29,3 +29,7 @@ function tick(now){
 
     requestAnimationFrame(tick);
 }
+
+function callAnimeFrame(){
+    requestAnimationFrame(tick);
+}
