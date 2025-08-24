@@ -1,44 +1,20 @@
-<!DOCTYPE html>
-
-<head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="./main.css">
-</head>
-
-
-<body>
-    <div class="wrap" style="padding:0px;">
-        <section>
-            <div class="board-scroller">
-                <div class="board">
-                    <div class="row-head">
-                        <!-- Row: uvw -->
-                        <div class="rowhead">uvw</div>
-                        <div class="cell card canvas-card">
-                            <span class="caption">시간영역 파형 (U,V,W)</span>
-                            <canvas id="wave"></canvas>
-                        </div>
-                        <div class="cell card canvas-card">
-                            <span class="caption">UVW 정지좌표계(phasor) — 120° 축</span>
-                            <canvas id="uvwStatic"></canvas>
-                        </div>
-                        <div class="cell card canvas-card">
-                            <span class="caption">시간영역 파형 3D (U,V,W + t)</span>
-                            <canvas id="uvw3D"></canvas>
-                        </div>
-                        <div class="cell card">
-                            <h2>UVW 수식</h2>
-                            <div class="mat">
-                                <pre id="matUVW"></pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
+<!-- Row: uvw -->
+<div class="rowhead">uvw</div>
+<div class="cell card canvas-card">
+    <span class="caption">시간영역 파형 (U,V,W)</span>
+    <canvas id="wave"></canvas>
+</div>
+<div class="cell card canvas-card">
+    <span class="caption">UVW 정지좌표계(phasor) — 120° 축</span>
+    <canvas id="uvwStatic"></canvas>
+</div>
+<div class="cell card canvas-card">
+    <span class="caption">시간영역 파형 3D (U,V,W + t)</span>
+    <canvas id="uvw3D"></canvas>
+</div>
+<div class="cell card">
+    <h2>UVW 수식</h2>
+    <div class="mat">
+        <pre id="matUVW"></pre>
     </div>
-    <script src="./main.js"></script>
-</body>
-
-</html>
+</div>
