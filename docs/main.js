@@ -131,14 +131,16 @@
     const inv_uvwS = document.getElementById("inv_uvw"); const ctxIuvwS = inv_uvwS.getContext('2d');
     const inv_uvw3 = document.getElementById("inv_uvw3D"); const ctxIuvw3 = inv_uvw3.getContext('2d');
 
-    
+    */
 
     function resizeCanvas() {
       const ratio = DPR();
+      /*
       [wave,ab,abT,ab3,uvw3,uvwS,dqT,dq3,dqS,inv_abT,inv_ab3,inv_abS,inv_uvwT,inv_uvwS,inv_uvw3].forEach(c=>{ const rect = c.getBoundingClientRect(); c.width = Math.max(1, Math.floor(rect.width * ratio)); c.height = Math.max(1, Math.floor(rect.height * ratio)); });
-    }
       */
-    /*
+      [wave,ab,abT,ab3,uvw3,uvwS,dqT,dq3,dqS].forEach(c=>{ const rect = c.getBoundingClientRect(); c.width = Math.max(1, Math.floor(rect.width * ratio)); c.height = Math.max(1, Math.floor(rect.height * ratio)); });
+    }
+      
     addEventListener('resize', resizeCanvas);
 */
     let t0 = 0, tHold = 0;
