@@ -142,7 +142,7 @@
   
       resizeCanvas();
       t0 = performance.now();
-      requestAnimationFrame(tick);
+      callAnimeFrame();
     }
 
     const deg2rad = d => d * Math.PI/180;
