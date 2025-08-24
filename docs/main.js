@@ -559,7 +559,6 @@
       ctxA3.strokeStyle = COLOR_BETA; ctxA3.lineWidth = 2; ctxA3.stroke();
 
       // Current rotating vector in αβ plane @ z=1
-      // yj 여기가 노랑
       const p0 = project3D(0,0,-2), p1 = project3D(a,b,-2);
       ctxA3.beginPath(); ctxA3.moveTo(p0[0], -p0[1]); ctxA3.lineTo(p1[0], -p1[1]);
       ctxA3.strokeStyle = '#FFCC00'; ctxA3.lineWidth = 2.4; ctxA3.stroke();
@@ -1105,7 +1104,7 @@
     }
 
     // kick off after DOM is ready (script is at the end, but ensure layout is done)
-    window.addEventListener('load', init);
+    window.addEventListener('load', init());
 
     function updateMathPark(t){
       const [u,v,w] = uvwAt(t); const [a,b] = clarke(u,v,w); const th = thetaE(t); const [d,q] = parkFromAlphaBeta(a,b,th);
