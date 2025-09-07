@@ -1,0 +1,2627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FOC 제어 시각화 - PMSM 모터</title>
+  <style>
+    :root {
+      --bg: #0b1220; --panel: #121a2b; --ink: #e6edf6; --muted:#9fb0ca; --accent:#4aa3ff; --grid:#23314f; --good:#FFCC00; --warn:#ffb020; --bad:#ff5d6c;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin:0; background: var(--bg); color: var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji; }
+    header { padding: 16px 20px; border-bottom: 1px solid #18223a; position: sticky; top:0; background: linear-gradient(180deg,var(--bg),rgba(11,18,32,0.8)); backdrop-filter: blur(6px); z-index: 2; }
+    header h1 { margin: 0; font-size: 20px; letter-spacing: .2px; }
+    header p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+    .wrap { display: grid; grid-template-columns: 520px 1fr; gap: 16px; padding: 16px; }
+    @media (max-width: 1180px){ .wrap { grid-template-columns: 1fr; } }
+
+    .card { background: var(--panel); border: 1px solid #1a2540; border-radius: 14px; padding: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+    .card h2 { margin: 0 0 8px; font-size: 16px; letter-spacing:.2px; }
+
+    /* Info Panel */
+    .info-panel {
+      background: linear-gradient(135deg, #1a2540 0%, #121a2b 100%);
+      border: 1px solid #2b3c63;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .info-panel h3 { 
+      margin: 0 0 8px; 
+      font-size: 14px; 
+      color: #4aa3ff;
+      display: flex;F
+      align-items: center;
+      gap: 8px;
+    }
+    .info-panel p { 
+      margin: 4px 0; 
+      font-size: 12px; 
+      color: #cfe0ff;
+      line-height: 1.5;
+    }
+
+    /* label | range | number | reset */
+    .row { display: grid; grid-template-columns: 1.2fr 2fr 110px 84px; align-items: center; gap: 10px; margin: 10px 0; }
+    .row label { font-size: 13px; color: var(--muted); }
+    .row input[type="range"] { width: 100%; }
+    .row input[type="number"] { width: 100%; background:#0f162a; color:var(--ink); border:1px solid #1c2a49; border-radius: 8px; padding:6px 8px; font-size:12px; }
+    .row button { width: 84px; background:#0e172b; border:1px solid #203156; color:#cfe0ff; border-radius:8px; padding:6px 8px; cursor:pointer; font-size:12px; transition: all 0.2s; }
+    .row button:hover { filter: brightness(1.12); transform: translateY(-1px); }
+
+    .grid-3 { display: grid; grid-template-columns: 1fr; gap:8px; }
+    .grid-3 .group { border:1px solid #1b2949; border-radius:12px; padding:10px; background:#0c1425; }
+    .group h3 { margin:0 0 6px; font-size:13px; color:#cfe0ff; font-weight:600; }
+
+    .pill { display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius: 999px; background:#0f1628; border:1px solid #1c2a49; font-size: 12px; color: var(--muted); transition: all 0.2s; cursor: pointer; }
+    .pill:hover { background:#121a2e; border-color:#2a3a5f; }
+    .pill input { transform: translateY(1px); cursor: pointer; }
+
+    .canvas-wrap { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 1080px){ .canvas-wrap { grid-template-columns: 1fr; } }
+    .canvas-card { position: relative; }
+    canvas { width: 100%; height: 320px; border-radius: 12px; background: #0b1220; display:block; }
+    .caption { position:absolute; top:10px; left:12px; font-size: 12px; color: var(--muted); background: rgba(10,16,28,.8); padding:4px 8px; border-radius: 999px; border:1px solid #213154; backdrop-filter: blur(4px); }
+
+    .mat { background:#0c1425; border:1px solid #1b2949; border-radius: 12px; padding: 12px; overflow:auto; }
+    .mat pre { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12.5px; line-height: 1.45; color:#b8c7e6; }
+    .badge { font-size: 11px; color:#cfe0ff; padding: 4px 6px; border-radius: 6px; border:1px solid #203156; background:#0e172b; }
+
+    .delta { margin-top:8px; font-size:12px; color:#cfe0ff; display:flex; flex-wrap:wrap; gap:10px; }
+    .delta span { background:#0e172b; border:1px solid #203156; padding:4px 6px; border-radius:6px; }
+
+    /* Board */
+    .board-scroller { overflow: auto; padding-bottom: 6px; }
+    .board { display: grid; grid-template-columns: 140px repeat(4, minmax(360px, 1fr)); gap: 12px; align-items: stretch; min-width: 1720px; }
+    .head { background: var(--panel); border:1px solid #1a2540; border-radius:12px; padding:10px; font-size:13px; color:#cfe0ff; font-weight:600; text-align:center; }
+    .rowhead { 
+      background: linear-gradient(135deg, #1a2540 0%, #121a2b 100%); 
+      border:1px solid #2b3c63; 
+      border-radius:12px; 
+      padding:10px; 
+      font-size:13px; 
+      color:#4aa3ff; 
+      font-weight:700; 
+      text-align:center; 
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cell { }
+    .placeholder { display:flex; align-items:center; justify-content:center; color:#9fb0ca; min-height: 300px; }
+    .cell.canvas-card canvas { height: 300px; }
+
+    /* Animation for real-time values */
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+    .realtime-value {
+      animation: pulse 2s infinite;
+      color: var(--good);
+      font-weight: 600;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      cursor: help;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 200px;
+      background-color: #1a2540;
+      color: #cfe0ff;
+      text-align: left;
+      border-radius: 8px;
+      padding: 8px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -100px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 11px;
+      border: 1px solid #2b3c63;
+    }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎯 Field Oriented Control (FOC) 시각화 - PMSM 모터</h1>
+    <p>3상 전류 <span class="badge">UVW</span> → <span class="badge">Clarke αβ</span> → <span class="badge">Park dq</span> 변환 과정을 실시간으로 확인하세요.</p>
+  </header>
+
+  <div class="wrap">
+    <!-- Controls -->
+    <section class="card">
+      <h2>🎛️ 입력 파라미터</h2>
+
+      <!-- Info Panel -->
+      <div class="info-panel">
+        <h3>💡 FOC 제어란?</h3>
+        <p>• Field Oriented Control은 AC 모터를 DC 모터처럼 제어하는 기법입니다.</p>
+        <p>• 3상 전류를 회전 좌표계로 변환하여 토크와 자속을 독립적으로 제어합니다.</p>
+        <p>• Clarke 변환: 3상 → 2상 정지좌표계 (αβ)</p>
+        <p>• Park 변환: 정지좌표계 → 회전좌표계 (dq)</p>
+      </div>
+
+      <div class="row" data-bind="amp">
+        <label class="tooltip">기본 진폭 A [V]
+          <span class="tooltiptext">3상 전압의 기본 진폭값입니다. 모터 정격전압에 해당합니다.</span>
+        </label>
+        <input id="amp" type="range" min="0" max="5" step="0.01" value="1" />
+        <input id="amp_num" type="number" step="0.01" />
+        <button id="amp_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="freq">
+        <label class="tooltip">기본 주파수 f [Hz]
+          <span class="tooltiptext">3상 전원의 주파수입니다. 모터의 회전속도와 관련됩니다.</span>
+        </label>
+        <input id="freq" type="range" min="0" max="20" step="0.01" value="1" />
+        <input id="freq_num" type="number" step="0.01" />
+        <button id="freq_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="tscale">
+        <label>시간 스케일</label>
+        <input id="tscale" type="range" min="0.25" max="4" step="0.05" value="1" />
+        <input id="tscale_num" type="number" step="0.05" />
+        <button id="tscale_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="cycles3D">
+        <label>3D 표시 주기</label>
+        <input id="cycles3D" type="range" min="1" max="10" step="0.5" value="1.5" />
+        <input id="cycles3D_num" type="number" step="0.5" />
+        <button id="cycles3D_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="fe">
+        <label class="tooltip">전기각 주파수 fₑ [Hz]
+          <span class="tooltiptext">회전자계의 전기각 속도입니다. Park 변환에 사용됩니다.</span>
+        </label>
+        <input id="fe" type="range" min="0" max="50" step="0.01" value="1" />
+        <input id="fe_num" type="number" step="0.01" />
+        <button id="fe_reset">기본값</button>
+      </div>
+      <div class="row" data-bind="theta0">
+        <label class="tooltip">전기각 오프셋 θ₀ [deg]
+          <span class="tooltiptext">회전자의 초기 위치각입니다.</span>
+        </label>
+        <input id="theta0" type="range" min="-180" max="180" step="1" value="0" />
+        <input id="theta0_num" type="number" step="1" />
+        <button id="theta0_reset">기본값</button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #1a2540;margin:14px 0;">
+      <h2>⚡ 상별 개별 조정</h2>
+      <div class="grid-3">
+        <div class="group">
+          <h3>U 상</h3>
+          <div class="row" data-bind="ampU"><label>U 진폭 [V]</label><input id="ampU" type="range" min="0" max="5" step="0.01" value="1" /><input id="ampU_num" type="number" step="0.01" /><button id="ampU_reset">기본값</button></div>
+          <div class="row" data-bind="phiU"><label>U 위상 [deg]</label><input id="phiU" type="range" min="-180" max="180" step="1" value="0" /><input id="phiU_num" type="number" step="1" /><button id="phiU_reset">기본값</button></div>
+          <div class="row" data-bind="offU"><label>U 오프셋 [V]</label><input id="offU" type="range" min="-2" max="2" step="0.01" value="0" /><input id="offU_num" type="number" step="0.01" /><button id="offU_reset">기본값</button></div>
+        </div>
+        <div class="group">
+          <h3>V 상</h3>
+          <div class="row" data-bind="ampV"><label>V 진폭 [V]</label><input id="ampV" type="range" min="0" max="5" step="0.01" value="1" /><input id="ampV_num" type="number" step="1" /><button id="ampV_reset">기본값</button></div>
+          <div class="row" data-bind="phiV"><label>V 위상 [deg]</label><input id="phiV" type="range" min="-180" max="180" step="1" value="-120" /><input id="phiV_num" type="number" step="1" /><button id="phiV_reset">기본값</button></div>
+          <div class="row" data-bind="offV"><label>V 오프셋 [V]</label><input id="offV" type="range" min="-2" max="2" step="0.01" value="0" /><input id="offV_num" type="number" step="0.01" /><button id="offV_reset">기본값</button></div>
+        </div>
+        <div class="group">
+          <h3>W 상</h3>
+          <div class="row" data-bind="ampW"><label>W 진폭 [V]</label><input id="ampW" type="range" min="0" max="5" step="0.01" value="1" /><input id="ampW_num" type="number" step="1" /><button id="ampW_reset">기본값</button></div>
+          <div class="row" data-bind="phiW"><label>W 위상 [deg]</label><input id="phiW" type="range" min="-180" max="180" step="1" value="120" /><input id="phiW_num" type="number" step="1" /><button id="phiW_reset">기본값</button></div>
+          <div class="row" data-bind="offW"><label>W 오프셋 [V]</label><input id="offW" type="range" min="-2" max="2" step="0.01" value="0" /><input id="offW_num" type="number" step="0.01" /><button id="offW_reset">기본값</button></div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">
+        <label class="pill tooltip">
+          <input id="lock120" type="checkbox" checked /> 120° 간격 고정
+          <span class="tooltiptext">3상 대칭 시스템을 유지합니다</span>
+        </label>
+        <label class="pill tooltip">
+          <input id="sumZero" type="checkbox" checked /> U+V+W=0 강제
+          <span class="tooltiptext">중성점 전류를 0으로 유지합니다</span>
+        </label>
+        <label class="pill tooltip">
+          <input id="syncTheta" type="checkbox" checked /> θe = f 동기화
+          <span class="tooltiptext">전기각을 전원 주파수에 동기화합니다</span>
+        </label>
+        <label class="pill">
+          <input id="freeze" type="checkbox" /> ⏸️ 시간 정지
+        </label>
+      </div>
+
+      <!-- Real-time values display -->
+      <div class="info-panel" style="margin-top: 14px;">
+        <h3>📊 실시간 값</h3>
+        <p>시간: <span id="rtTime" class="realtime-value">0.000</span> s</p>
+        <p>U상: <span id="rtU" class="realtime-value">0.000</span> V</p>
+        <p>α: <span id="rtAlpha" class="realtime-value">0.000</span> | β: <span id="rtBeta" class="realtime-value">0.000</span></p>
+        <p>d: <span id="rtD" class="realtime-value">0.000</span> | q: <span id="rtQ" class="realtime-value">0.000</span></p>
+      </div>
+    </section>
+
+    <!-- Plots & math -->
+    <section>
+      <div class="board-scroller">
+        <div class="board">
+          <!-- Column headers -->
+          <div class="head"></div>
+          <div class="head">⏱️ 시간영역</div>
+          <div class="head">📍 정지좌표계</div>
+          <div class="head">🎮 3D 시각화</div>
+          <div class="head">📐 수식</div>
+
+          <!-- Row: uvw -->
+          <div class="rowhead">📊 UVW</div>
+          <div class="cell card canvas-card">
+            <div class="caption">3상 전압 파형</div>
+            <canvas id="wave"></canvas>
+          </div>
+          <div class="cell card canvas-card">
+            <div class="caption">UVW 페이저 다이어그램</div>
+            <canvas id="uvwStatic"></canvas>
+          </div>
+          <div class="cell card canvas-card">
+            <div class="caption">3상 파형 3D</div>
+            <canvas id="uvw3D"></canvas>
+          </div>
+          <div class="cell card">
+            <h2>UVW 3상 전압</h2>
+            <div class="mat"><pre id="matUVW"></pre></div>
+          </div>
+
+          <!-- Row: clarke -->
+          <div class="rowhead">🔄 Clarke</div>
+          <div class="cell card canvas-card">
+            <div class="caption">αβ 시간영역</div>
+            <canvas id="alphabetaTime"></canvas>
+          </div>
+          <div class="cell card canvas-card">
+            <div class="caption">Clarke αβ 벡터</div>
+            <canvas id="alphaBeta"></canvas>
+          </div>
+          <div class="cell card canvas-card">
+            <div class="caption">αβ 궤적 3D</div>
+            <canvas id="alphaBeta3D"></canvas>
+          </div>
+          <div class="cell card">
+            <h2>Clarke 변환</h2>
+            <div class="mat"><pre id="matText"></pre></div>
+            <div id="deltaBox" class="delta" style="display:none;"></div>
+          </div>
+
+          <!-- Row: park -->
+          <div class="rowhead">🔄 Park</div>
+          <div class="cell card canvas-card">
+            <div class="caption">dq 시간영역</div>
+            <canvas id="dqTime"></canvas>
+          </div>
+          <div class="cell card canvas-card">
+            <div class="caption">Park dq 벡터</div>
+            <canvas id="dqStatic"></canvas>
+          </div>
+          <div class="cell card canvas-card">
+            <div class="caption">dq 궤적 3D</div>
+            <canvas id="dq3D"></canvas>
+          </div>
+          <div class="cell card">
+            <h2>Park 변환</h2>
+            <div class="mat"><pre id="matPark"></pre></div>
+          </div>
+
+          <!-- Row: inv-park -->
+<div class="rowhead">↩️ Inv-Park</div>
+<div class="cell card canvas-card">
+  <div class="caption">역변환 αβ 시간영역</div>
+  <canvas id="inv_alphaBetaTime"></canvas>
+</div>
+<div class="cell card canvas-card">
+  <div class="caption">역변환 αβ 벡터</div>
+  <canvas id="inv_alphaBeta"></canvas>
+</div>
+<div class="cell card canvas-card">
+  <div class="caption">역변환 αβ 3D</div>
+  <canvas id="invPark3D"></canvas>  <!-- 이 부분 추가 -->
+</div>
+<div class="cell card">
+  <h2>역 Park 변환</h2>
+  <div class="mat"><pre id="matInvPark">역 Park 변환 (dq→αβ)
+
+  [α]   = [ cosθe  -sinθe] [d]
+  [β]     [ sinθe   cosθe] [q]</pre></div>
+</div>
+
+          <!-- Row: inv-clarke -->
+<div class="rowhead">↩️ Inv-Clarke</div>
+<div class="cell card canvas-card">
+  <div class="caption">역변환 UVW 시간영역</div>
+  <canvas id="inv_uvwTime"></canvas>
+</div>
+<div class="cell card canvas-card">
+  <div class="caption">역변환 UVW 페이저</div>
+  <canvas id="inv_uvw"></canvas>
+</div>
+<div class="cell card canvas-card">
+  <div class="caption">역변환 UVW 3D</div>
+  <canvas id="invClarke3D"></canvas>  <!-- 이 부분 추가 -->
+</div>
+<div class="cell card">
+  <h2>역 Clarke 변환</h2>
+  <div class="mat"><pre id="matInvClarke">역 Clarke 변환 (αβ→UVW)
+
+  [u]     [ 1    0  ] 
+  [v]  =  [-1/2  √3/2] [α]
+  [w]     [-1/2 -√3/2] [β]</pre></div>
+</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ---------- Utilities ----------
+    const $ = (id) => document.getElementById(id);
+    const DPR = () => (window.devicePixelRatio || 1);
+
+    // === Colors ===
+    const COLOR_ALPHA = '#ff5d6c';
+    const COLOR_BETA  = '#4aa3ff';
+    const COLOR_TRAIL = '#9dd7ff';
+    const COLOR_U = '#4aa3ff';
+    const COLOR_V = '#7affc5';
+    const COLOR_W = '#ff5d6c';
+    const COLOR_D = COLOR_ALPHA;
+    const COLOR_Q = COLOR_BETA;
+
+    // 3D layout constants
+    const WALL_X = 1.75;
+    const FLOOR_Y = 1.5;
+    const AMP_RANGE = 1.2;
+
+    // Defaults
+    const defs = {
+      amp: 1, freq: 1, tscale: 1, fe: 1, theta0: 0,
+      cycles3D: 1.5,
+      ampU:1, ampV:1, ampW:1,
+      phiU:0, phiV:-120, phiW:120,
+      offU:0, offV:0, offW:0
+    };
+
+    // Bind range + number + reset for each id
+    function bindTriple(id){
+      const r = $(id), n = $(id+"_num"), b = $(id+"_reset");
+      if (!r || !n || !b) return { r:null, n:null };
+      n.value = r.value;
+      n.addEventListener('input', ()=>{ r.value = n.value; onInput({target:r}); });
+      r.addEventListener('input', ()=>{ n.value = r.value; onInput({target:r}); });
+      b.addEventListener('click', ()=>{ r.value = defs[id]; n.value = defs[id]; onInput({target:r}); });
+      return {r,n};
+    }
+
+    const pairs = {
+      amp: bindTriple('amp'),
+      freq: bindTriple('freq'),
+      tscale: bindTriple('tscale'),
+      fe: bindTriple('fe'),
+      theta0: bindTriple('theta0'),
+      cycles3D: bindTriple('cycles3D'),
+      ampU: bindTriple('ampU'),
+      ampV: bindTriple('ampV'),
+      ampW: bindTriple('ampW'),
+      phiU: bindTriple('phiU'),
+      phiV: bindTriple('phiV'),
+      phiW: bindTriple('phiW'),
+      offU: bindTriple('offU'),
+      offV: bindTriple('offV'),
+      offW: bindTriple('offW'),
+    };
+
+    const lock120 = $("lock120"), sumZero = $("sumZero"), freeze = $("freeze"), syncTheta = $("syncTheta");
+
+    // Global speed throttle
+    const SPEED_FACTOR = 0.35;
+    function simTime(now){
+      return ((now - t0)/1000) * SPEED_FACTOR / +pairs.tscale.r.value;
+    }
+
+    // Freeze behavior
+    freeze.addEventListener('change', ()=>{
+      const now = performance.now();
+      if (freeze.checked) {
+        tHold = simTime(now);
+      }
+    });
+
+    // Change tracking
+    let deltaActive = false;
+    let deltaRef = null;
+    let deltaTimer = null;
+
+    function snapshotValues(t){
+      const [u,v,w] = uvwAt(t);
+      const [a,b] = clarke(u,v,w);
+      return {u,v,w,a,b};
+    }
+
+    function beginDelta(t){
+      if (!deltaActive){ deltaRef = snapshotValues(t); deltaActive = true; $("deltaBox").style.display = 'flex'; }
+      if (deltaTimer) clearTimeout(deltaTimer);
+      deltaTimer = setTimeout(()=>{ deltaActive=false; deltaRef=null; $("deltaBox").style.display='none'; }, 700);
+    }
+
+    function onInput(e){
+      const id = e.target.id;
+      if (["phiU","phiV","phiW"].includes(id) && lock120.checked){
+        if (id==='phiU'){ pairs.phiV.r.value = (+pairs.phiU.r.value - 120); pairs.phiW.r.value = (+pairs.phiU.r.value + 120); }
+        if (id==='phiV'){ pairs.phiU.r.value = (+pairs.phiV.r.value + 120); pairs.phiW.r.value = (+pairs.phiV.r.value + 240); }
+        if (id==='phiW'){ pairs.phiU.r.value = (+pairs.phiW.r.value - 120); pairs.phiV.r.value = (+pairs.phiW.r.value - 240); }
+        pairs.phiV.n.value = pairs.phiV.r.value; pairs.phiW.n.value = pairs.phiW.r.value; pairs.phiU.n.value = pairs.phiU.r.value;
+      }
+      if (["ampU","ampV","ampW"].includes(id) && lock120.checked){
+        const val = $(id).value;
+        ['ampU','ampV','ampW'].forEach(k=>{ pairs[k].r.value = val; pairs[k].n.value = val; });
+      }
+      const now = performance.now();
+      const t = freeze.checked ? tHold : simTime(now);
+      beginDelta(t);
+    }
+
+    // --- Signals & canvases ---
+    const wave = $("wave"); const ctxW = wave.getContext('2d');
+    const uvwS = $("uvwStatic"); const ctxUS = uvwS.getContext('2d');
+    const uvw3 = $("uvw3D"); const ctxU3 = uvw3.getContext('2d');
+
+    const ab = $("alphaBeta"); const ctxA = ab.getContext('2d');
+    const abT = $("alphabetaTime"); const ctxAT = abT.getContext('2d');
+    const ab3 = $("alphaBeta3D"); const ctxA3 = ab3.getContext('2d');
+
+    const dqT = $("dqTime"); const ctxDT = dqT.getContext('2d');
+    const dq3 = $("dq3D"); const ctxD3 = dq3.getContext('2d');
+    const dqS = $("dqStatic"); const ctxDS = dqS.getContext('2d');
+
+    const inv_abT = $("inv_alphaBetaTime"); const ctxIABT = inv_abT.getContext('2d');
+    const inv_abS = $("inv_alphaBeta"); const ctxIABS = inv_abS.getContext('2d');
+    const invP3 = $("invPark3D"); const ctxIP3 = invP3.getContext('2d');
+
+    const inv_uvwT = $("inv_uvwTime"); const ctxIuvwT = inv_uvwT.getContext('2d');
+    const inv_uvwS = $("inv_uvw"); const ctxIuvwS = inv_uvwS.getContext('2d');
+    const invC3 = $("invClarke3D"); const ctxIC3 = invC3.getContext('2d');
+
+
+    function resizeCanvas() {
+      const ratio = DPR();
+      [wave,ab,abT,ab3,uvw3,uvwS,dqT,dq3,dqS,inv_abT,inv_abS,inv_uvwT,inv_uvwS,invP3,invC3].forEach(c=>{ 
+        const rect = c.getBoundingClientRect(); 
+        c.width = Math.max(1, Math.floor(rect.width * ratio)); 
+        c.height = Math.max(1, Math.floor(rect.height * ratio)); 
+      });
+    }
+    addEventListener('resize', resizeCanvas);
+
+    let t0 = 0, tHold = 0;
+    function init(){
+      resizeCanvas();
+      t0 = performance.now();
+      requestAnimationFrame(tick);
+    }
+
+    const deg2rad = d => d * Math.PI/180;
+
+    function uvwAt(t){
+      const A0 = +pairs.amp.r.value;
+      const u = +pairs.offU.r.value + (+pairs.ampU.r.value || A0) * Math.sin(2*Math.PI*+pairs.freq.r.value * t + deg2rad(+pairs.phiU.r.value));
+      const v = +pairs.offV.r.value + (+pairs.ampV.r.value || A0) * Math.sin(2*Math.PI*+pairs.freq.r.value * t + deg2rad(+pairs.phiV.r.value));
+      let w = +pairs.offW.r.value + (+pairs.ampW.r.value || A0) * Math.sin(2*Math.PI*+pairs.freq.r.value * t + deg2rad(+pairs.phiW.r.value));
+      if (sumZero.checked) w = -(u+v);
+      return [u,v,w];
+    }
+
+    // clarke 함수 수정 - 정규화 제거
+    function clarke(u,v,w){
+      const alpha = (u - 0.5*v - 0.5*w);
+      const beta  = ((Math.sqrt(3)/2) * (v - w));
+      return [alpha, beta];
+    }
+
+    function drawGrid(ctx){
+      const w = ctx.canvas.width, h = ctx.canvas.height;
+      ctx.clearRect(0,0,w,h);
+      ctx.lineWidth = 1; ctx.strokeStyle = '#1a2744';
+      const step = 40 * DPR();
+      ctx.beginPath();
+      for(let x=0;x<w;x+=step){ ctx.moveTo(x,0); ctx.lineTo(x,h); }
+      for(let y=0;y<h;y+=step){ ctx.moveTo(0,y); ctx.lineTo(w,y); }
+      ctx.stroke();
+    }
+
+    function drawWave(t){
+      const w = ctxW.canvas.width, h = ctxW.canvas.height; drawGrid(ctxW);
+      const N = 600;
+      const dt = (1/1200) / +pairs.tscale.r.value;
+      ctxW.lineWidth = 1.25; ctxW.strokeStyle = '#2b3c63';
+      ctxW.beginPath(); ctxW.moveTo(0, h/2); ctxW.lineTo(w, h/2); ctxW.stroke();
+
+      const colors = [COLOR_U, COLOR_V, COLOR_W];
+      [[0,'U'],[1,'V'],[2,'W']].forEach(([idx,label])=>{
+        ctxW.beginPath();
+        for(let i=0;i<N;i++){
+          const ti = t - (N-i)*dt;
+          const [u,v,wv] = uvwAt(ti);
+          const y = [u,v,wv][idx];
+          const px = (i/(N-1))*w; const py = h/2 - y * 60 * DPR();
+          if(i===0) ctxW.moveTo(px,py); else ctxW.lineTo(px,py);
+        }
+        ctxW.strokeStyle = colors[idx]; ctxW.lineWidth = 2; ctxW.stroke();
+      });
+    }
+
+    function drawAxesWithLabels(ctx){
+      const w = ctx.canvas.width, h = ctx.canvas.height;
+      ctx.save();
+      ctx.translate(w/2, h/2);
+      ctx.strokeStyle = '#2b3c63'; ctx.lineWidth = 1.25;
+      ctx.beginPath(); ctx.moveTo(-w/2,0); ctx.lineTo(w/2,0); ctx.moveTo(0,-h/2); ctx.lineTo(0,h/2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w/2-10, -4); ctx.lineTo(w/2, 0); ctx.lineTo(w/2-10, 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-4, -h/2+10); ctx.lineTo(0, -h/2); ctx.lineTo(4, -h/2+10); ctx.stroke();
+      ctx.fillStyle = '#cfe0ff';
+      ctx.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      ctx.fillText('α (X)', w/2 - 40, -8);
+      ctx.fillText('β (Y)', 8, -h/2 + 18);
+      ctx.restore();
+    }
+
+    // drawAlphaBeta 함수 수정 - Y축 부호 통일
+    function drawAlphaBeta(t){
+      const w = ctxA.canvas.width, h = ctxA.canvas.height; 
+      drawGrid(ctxA);
+      drawAxesWithLabels(ctxA);
+
+      const S = 90 * DPR();
+      ctxA.save();
+      ctxA.translate(w/2, h/2);
+
+      const f = Math.max(0, +pairs.freq.r.value);
+      let a=0, b=0;
+      
+      if (f > 1e-6){
+        const T = 1/f;
+        const N = 720;
+        ctxA.beginPath();
+        for (let i=0; i<=N; i++){
+          const ti = t - T + (i/N)*T;
+          const [u,v,wv] = uvwAt(ti);
+          const [aa,bb] = clarke(u,v,wv);
+          const px = aa * S, py = -bb * S;  // Y축 부호 통일 (Canvas Y는 아래가 +)
+          if (i===0) ctxA.moveTo(px,py); 
+          else ctxA.lineTo(px,py);
+          if (i===N){ a = aa; b = bb; }
+        }
+        ctxA.strokeStyle = '#9dd7ff'; 
+        ctxA.lineWidth = 1.6; 
+        ctxA.stroke();
+      } else {
+        const [u,v,wv] = uvwAt(t); 
+        [a,b] = clarke(u,v,wv);
+        ctxA.beginPath(); 
+        ctxA.arc(a*S, -b*S, 3.5*DPR(), 0, Math.PI*2); 
+        ctxA.fillStyle = '#9dd7ff'; 
+        ctxA.fill();
+      }
+
+      const vx = a * S, vy = -b * S;  // Y축 부호 통일
+      ctxA.beginPath(); 
+      ctxA.moveTo(0,0); 
+      ctxA.lineTo(vx,vy); 
+      ctxA.strokeStyle = '#FFCC00'; 
+      ctxA.lineWidth = 2.4; 
+      ctxA.stroke();
+      ctxA.beginPath(); 
+      ctxA.arc(vx,vy,4.5*DPR(),0,Math.PI*2); 
+      ctxA.fillStyle = '#FFCC00'; 
+      ctxA.fill();
+
+      // α, β 성분도 동일하게 수정
+      ctxA.lineWidth = 2;
+      ctxA.beginPath(); 
+      ctxA.moveTo(0,0); 
+      ctxA.lineTo(vx,0); 
+      ctxA.strokeStyle = COLOR_ALPHA; 
+      ctxA.stroke();
+      ctxA.beginPath(); 
+      ctxA.arc(vx,0,4*DPR(),0,Math.PI*2); 
+      ctxA.fillStyle = COLOR_ALPHA; 
+      ctxA.fill();
+      
+      ctxA.beginPath(); 
+      ctxA.moveTo(0,0); 
+      ctxA.lineTo(0,vy); 
+      ctxA.strokeStyle = COLOR_BETA; 
+      ctxA.stroke();
+      ctxA.beginPath(); 
+      ctxA.arc(0,vy,4*DPR(),0,Math.PI*2); 
+      ctxA.fillStyle = COLOR_BETA; 
+      ctxA.fill();
+      
+      ctxA.setLineDash([6,6]);
+      ctxA.beginPath(); 
+      ctxA.moveTo(vx,vy); 
+      ctxA.lineTo(vx,0); 
+      ctxA.strokeStyle = COLOR_ALPHA; 
+      ctxA.stroke();
+      ctxA.beginPath(); 
+      ctxA.moveTo(vx,vy); 
+      ctxA.lineTo(0,vy); 
+      ctxA.strokeStyle = COLOR_BETA; 
+      ctxA.stroke();
+      ctxA.setLineDash([]);
+
+      ctxA.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      ctxA.fillStyle = COLOR_ALPHA;
+      ctxA.textAlign = 'center';
+      ctxA.fillText(`α=${a.toFixed(3)}`, vx + 12*DPR(), -12*DPR());
+      ctxA.fillStyle = COLOR_BETA;
+      ctxA.textAlign = 'right';
+      ctxA.fillText(`β=${b.toFixed(3)}`, -12*DPR(), vy);
+
+      ctxA.restore();
+    }
+
+    function drawAlphaBetaTime(t){
+      const w = ctxAT.canvas.width, h = ctxAT.canvas.height; drawGrid(ctxAT);
+      const N = 600; const dt = (1/1200) / +pairs.tscale.r.value;
+      ctxAT.lineWidth = 1.25; ctxAT.strokeStyle = '#2b3c63';
+      ctxAT.beginPath(); ctxAT.moveTo(0, h/2); ctxAT.lineTo(w, h/2); ctxAT.stroke();
+      ctxAT.fillStyle = '#cfe0ff'; ctxAT.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      ctxAT.fillText('α(t)', 10, 16); ctxAT.fillText('β(t)', 60, 16);
+
+      const series = [
+        {key:'alpha', color:COLOR_ALPHA},
+        {key:'beta',  color:COLOR_BETA}
+      ];
+
+      series.forEach((sObj)=>{
+        ctxAT.beginPath();
+        for(let i=0;i<N;i++){
+          const ti = t - (N-i)*dt;
+          const [u,v,wv] = uvwAt(ti);
+          const [a,b] = clarke(u,v,wv);
+          const y = (sObj.key==='alpha') ? a : b;
+          const px = (i/(N-1))*w; const py = h/2 - y * 60 * DPR();
+          if(i===0) ctxAT.moveTo(px,py); else ctxAT.lineTo(px,py);
+        }
+        ctxAT.strokeStyle = sObj.color; ctxAT.lineWidth = 2; ctxAT.stroke();
+      });
+    }
+
+    // 3D projection functions
+    const VIEW = { pitch: deg2rad(35.26438968), yaw: deg2rad(45), roll: deg2rad(0) };
+    function rotX(p,a){ const [x,y,z]=p; return [x, y*Math.cos(a)-z*Math.sin(a), y*Math.sin(a)+z*Math.cos(a)]; }
+    function rotY(p,a){ const [x,y,z]=p; return [ x*Math.cos(a)+z*Math.sin(a), y, -x*Math.sin(a)+z*Math.cos(a) ]; }
+    function rotZ(p,a){ const [x,y,z]=p; return [ x*Math.cos(a)-y*Math.sin(a), x*Math.sin(a)+y*Math.cos(a), z ]; }
+
+    function project3D(x,y,z){
+      const S = 80 * DPR();
+      const ZS = 0.9 * S;
+      let p = [x*S, y*S, z*ZS];
+      p = rotY(p, VIEW.yaw);
+      p = rotX(p, VIEW.pitch);
+      p = rotZ(p, VIEW.roll);
+      return p;
+    }
+
+    function drawAxes3D(ctx){
+      const w = ctx.canvas.width, h = ctx.canvas.height;
+      ctx.clearRect(0,0,w,h);
+      ctx.save();
+      ctx.translate(w/2, h/2);
+      ctx.lineWidth = 1.25; ctx.strokeStyle = '#2b3c63'; ctx.fillStyle = '#cfe0ff';
+      ctx.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      let p0 = project3D(0,0,0); let pX = project3D(3,0,0);
+      ctx.beginPath(); ctx.moveTo(-pX[0],pX[1]); ctx.lineTo(pX[0],-pX[1]); ctx.stroke(); ctx.fillText('α (X)', pX[0]-10, -pX[1]-6);
+      let pY = project3D(0,2,0);
+      ctx.beginPath(); ctx.moveTo(-pY[0],pY[1]); ctx.lineTo(pY[0],-pY[1]); ctx.stroke(); ctx.fillText('β (Y)', pY[0]+4, -pY[1]);
+      let pZ = project3D(0,0,3);
+      ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(pZ[0],-pZ[1]); ctx.stroke(); ctx.fillText('t', pZ[0]+4, -pZ[1]);
+      ctx.restore();
+    }
+
+// drawAlphaBeta3D 함수만 수정 - Z축 반대 방향
+function drawAlphaBeta3D(t){
+  const w = ctxA3.canvas.width, h = ctxA3.canvas.height;
+  ctxA3.clearRect(0,0,w,h);
+  
+  const cx = w/2, cy = h/2;
+  ctxA3.save();
+  ctxA3.translate(cx, cy);
+  
+  const S = 80 * DPR();
+  const f = Math.max(0.001, +pairs.freq.r.value);
+  const cycles = Math.max(1, +pairs.cycles3D.r.value || 2);
+  
+  // Z축 방향 반대로 (음수 방향으로 확장)
+  const totalCycles = cycles * 3;
+  const zStart = 0;
+  const zEnd = -totalCycles;  // 음수 방향으로
+  
+  // 현재 αβ 값
+  const [u,v,wv] = uvwAt(t);
+  const [a,b] = clarke(u,v,wv);
+  
+  // 투영 평면 위치
+  const BETA_WALL = 1.8;
+  const ALPHA_FLOOR = -1.8;
+  
+  // 3D 좌표축
+  ctxA3.strokeStyle = '#2b3c63';
+  ctxA3.lineWidth = 1.5;
+  
+  // X축 (α)
+  let pX1 = project3D(-2, 0, 0);
+  let pX2 = project3D(2, 0, 0);
+  ctxA3.beginPath();
+  ctxA3.moveTo(pX1[0], -pX1[1]);
+  ctxA3.lineTo(pX2[0], -pX2[1]);
+  ctxA3.stroke();
+  
+  // Y축 (β)  
+  let pY1 = project3D(0, -2, 0);
+  let pY2 = project3D(0, 2, 0);
+  ctxA3.beginPath();
+  ctxA3.moveTo(pY1[0], -pY1[1]);
+  ctxA3.lineTo(pY2[0], -pY2[1]);
+  ctxA3.stroke();
+  
+  // Z축 (시간) - 음수 방향
+  let pZ1 = project3D(0, 0, zStart);
+  let pZ2 = project3D(0, 0, zEnd);
+  ctxA3.beginPath();
+  ctxA3.moveTo(pZ1[0], -pZ1[1]);
+  ctxA3.lineTo(pZ2[0], -pZ2[1]);
+  ctxA3.stroke();
+  
+  // 축 라벨
+  ctxA3.fillStyle = '#cfe0ff';
+  ctxA3.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+  ctxA3.fillText('α', pX2[0] + 10, -pX2[1]);
+  ctxA3.fillText('β', pY2[0] + 10, -pY2[1]);
+  ctxA3.fillText('t', pZ2[0] + 10, -pZ2[1]);
+  
+  // 바닥면 (α-시간 평면)
+  ctxA3.fillStyle = 'rgba(255, 93, 108, 0.08)';
+  ctxA3.strokeStyle = 'rgba(255, 93, 108, 0.3)';
+  ctxA3.lineWidth = 0.5;
+  ctxA3.beginPath();
+  let p1 = project3D(-1.5, ALPHA_FLOOR, zStart);
+  let p2 = project3D(1.5, ALPHA_FLOOR, zStart);
+  let p3 = project3D(1.5, ALPHA_FLOOR, zEnd);
+  let p4 = project3D(-1.5, ALPHA_FLOOR, zEnd);
+  ctxA3.moveTo(p1[0], -p1[1]);
+  ctxA3.lineTo(p2[0], -p2[1]);
+  ctxA3.lineTo(p3[0], -p3[1]);
+  ctxA3.lineTo(p4[0], -p4[1]);
+  ctxA3.closePath();
+  ctxA3.fill();
+  ctxA3.stroke();
+  
+  // 오른쪽 벽면 (β-시간 평면)
+  ctxA3.fillStyle = 'rgba(74, 163, 255, 0.08)';
+  ctxA3.strokeStyle = 'rgba(74, 163, 255, 0.3)';
+  ctxA3.beginPath();
+  p1 = project3D(BETA_WALL, -1.5, zStart);
+  p2 = project3D(BETA_WALL, 1.5, zStart);
+  p3 = project3D(BETA_WALL, 1.5, zEnd);
+  p4 = project3D(BETA_WALL, -1.5, zEnd);
+  ctxA3.moveTo(p1[0], -p1[1]);
+  ctxA3.lineTo(p2[0], -p2[1]);
+  ctxA3.lineTo(p3[0], -p3[1]);
+  ctxA3.lineTo(p4[0], -p4[1]);
+  ctxA3.closePath();
+  ctxA3.fill();
+  ctxA3.stroke();
+  
+  // XY 평면 (αβ 평면)
+  ctxA3.fillStyle = 'rgba(255, 204, 0, 0.05)';
+  ctxA3.strokeStyle = 'rgba(255, 204, 0, 0.2)';
+  const circleSteps = 60;
+  ctxA3.beginPath();
+  for(let i = 0; i <= circleSteps; i++){
+    const angle = (i / circleSteps) * Math.PI * 2;
+    const x = Math.cos(angle) * 1.5;
+    const y = Math.sin(angle) * 1.5;
+    const p = project3D(x, y, 0);
+    if(i === 0) ctxA3.moveTo(p[0], -p[1]);
+    else ctxA3.lineTo(p[0], -p[1]);
+  }
+  ctxA3.closePath();
+  ctxA3.fill();
+  ctxA3.stroke();
+  
+  // 3D 나선형 궤적
+  const N = 360 * totalCycles;
+  const timeRange = totalCycles / f;
+  
+  ctxA3.strokeStyle = 'rgba(255, 204, 0, 0.8)';
+  ctxA3.lineWidth = 2;
+  ctxA3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const [ai,bi] = clarke(ui,vi,wi);
+    const z = zStart + phase * (zEnd - zStart);
+    const p = project3D(-ai, -bi, z);
+    if(i === 0) ctxA3.moveTo(p[0], -p[1]);
+    else ctxA3.lineTo(p[0], -p[1]);
+  }
+  ctxA3.stroke();
+  
+  // α(t) 투영 - 바닥면에 사인파
+  ctxA3.strokeStyle = COLOR_ALPHA;
+  ctxA3.lineWidth = 2.5;
+  ctxA3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const [ai,bi] = clarke(ui,vi,wi);
+    const z = zStart + phase * (zEnd - zStart);
+    const p = project3D(-ai, ALPHA_FLOOR, z);
+    if(i === 0) ctxA3.moveTo(p[0], -p[1]);
+    else ctxA3.lineTo(p[0], -p[1]);
+  }
+  ctxA3.stroke();
+  
+  // β(t) 투영 - 오른쪽 벽면에 사인파
+  ctxA3.strokeStyle = COLOR_BETA;
+  ctxA3.lineWidth = 2.5;
+  ctxA3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const [ai,bi] = clarke(ui,vi,wi);
+    const z = zStart + phase * (zEnd - zStart);
+    const p = project3D(BETA_WALL, -bi, z);
+    if(i === 0) ctxA3.moveTo(p[0], -p[1]);
+    else ctxA3.lineTo(p[0], -p[1]);
+  }
+  ctxA3.stroke();
+  
+  // 현재 벡터와 투영선
+  const currentZ = zStart;  // 현재는 원점에
+  const pCurrent = project3D(a, b, currentZ);
+  const pAlpha = project3D(a, ALPHA_FLOOR, currentZ);
+  const pBeta = project3D(BETA_WALL, b, currentZ);
+  const pOrigin = project3D(0, 0, currentZ);
+  
+  // 현재 벡터
+  ctxA3.strokeStyle = '#FFCC00';
+  ctxA3.lineWidth = 3;
+  ctxA3.beginPath();
+  ctxA3.moveTo(pOrigin[0], -pOrigin[1]);
+  ctxA3.lineTo(pCurrent[0], -pCurrent[1]);
+  ctxA3.stroke();
+  
+  ctxA3.fillStyle = '#FFCC00';
+  ctxA3.beginPath();
+  ctxA3.arc(pCurrent[0], -pCurrent[1], 5*DPR(), 0, Math.PI*2);
+  ctxA3.fill();
+  
+  // 투영선
+  ctxA3.setLineDash([4, 4]);
+  ctxA3.lineWidth = 1.5;
+  
+  ctxA3.strokeStyle = COLOR_ALPHA;
+  ctxA3.beginPath();
+  ctxA3.moveTo(pCurrent[0], -pCurrent[1]);
+  ctxA3.lineTo(pAlpha[0], -pAlpha[1]);
+  ctxA3.stroke();
+  
+  ctxA3.strokeStyle = COLOR_BETA;
+  ctxA3.beginPath();
+  ctxA3.moveTo(pCurrent[0], -pCurrent[1]);
+  ctxA3.lineTo(pBeta[0], -pBeta[1]);
+  ctxA3.stroke();
+  
+  ctxA3.setLineDash([]);
+  
+  // 투영점
+  ctxA3.fillStyle = COLOR_ALPHA;
+  ctxA3.beginPath();
+  ctxA3.arc(pAlpha[0], -pAlpha[1], 4*DPR(), 0, Math.PI*2);
+  ctxA3.fill();
+  
+  ctxA3.fillStyle = COLOR_BETA;
+  ctxA3.beginPath();
+  ctxA3.arc(pBeta[0], -pBeta[1], 4*DPR(), 0, Math.PI*2);
+  ctxA3.fill();
+  
+  // 평면 라벨
+  ctxA3.fillStyle = COLOR_ALPHA;
+  ctxA3.font = `${Math.round(11*DPR())}px ui-monospace, monospace`;
+  const floorLabel = project3D(1.3, ALPHA_FLOOR, 0);
+  ctxA3.fillText('α(t)', floorLabel[0], -floorLabel[1]);
+  
+  ctxA3.fillStyle = COLOR_BETA;
+  const wallLabel = project3D(BETA_WALL, 1.3, 0);
+  ctxA3.fillText('β(t)', wallLabel[0], -wallLabel[1]);
+  
+  ctxA3.restore();
+}
+
+    // UVW 3D
+    function project3D_custom(x,y,z,Sx,Sy,Sz){
+      let p = [x*Sx, y*Sy, z*Sz];
+      p = rotX(p, VIEW.pitch); p = rotY(p, VIEW.yaw); p = rotZ(p, VIEW.roll);
+      return p;
+    }
+
+    function drawAxes3D_UVW(ctx){
+      const w = ctx.canvas.width, h = ctx.canvas.height; drawGrid(ctx);
+      const cx = w/2, cy = h/2; const Sx = 80*DPR(), Sy = 60*DPR(), Sz = 0.9*Sy;
+      ctx.save(); ctx.translate(cx,cy);
+      ctx.lineWidth = 1.25; ctx.strokeStyle = '#2b3c63'; ctx.fillStyle = '#cfe0ff';
+      ctx.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      const p0 = project3D_custom(0,0,0,Sx,Sy,Sz);
+      const pX = project3D_custom(1.4,0,0,Sx,Sy,Sz);
+      const pY = project3D_custom(0,1.4,0,Sx,Sy,Sz);
+      const pZ = project3D_custom(0,0,1.2,Sx,Sy,Sz);
+      ctx.beginPath(); ctx.moveTo(p0[0],-p0[1]); ctx.lineTo(pX[0],-pX[1]); ctx.stroke(); ctx.fillText('phase', pX[0]-22, -pX[1]-6);
+      ctx.beginPath(); ctx.moveTo(p0[0],-p0[1]); ctx.lineTo(pY[0],-pY[1]); ctx.stroke(); ctx.fillText('amp', pY[0]+6, -pY[1]);
+      ctx.beginPath(); ctx.moveTo(p0[0],-p0[1]); ctx.lineTo(pZ[0],-pZ[1]); ctx.stroke(); ctx.fillText('t', pZ[0]+6, -pZ[1]);
+      const tU = project3D_custom(-1,0,0,Sx,Sy,Sz); const tV = project3D_custom(0,0,0,Sx,Sy,Sz); const tW = project3D_custom(1,0,0,Sx,Sy,Sz);
+      ctx.fillStyle = COLOR_U; ctx.fillText('U', tU[0]-6, -tU[1]-6);
+      ctx.fillStyle = COLOR_V; ctx.fillText('V', tV[0]+6, -tV[1]-6);
+      ctx.fillStyle = COLOR_W; ctx.fillText('W', tW[0]+6, -tW[1]-6);
+      ctx.restore();
+    }
+
+function drawUVW3D(t){
+  const canvasWidth = ctxU3.canvas.width, canvasHeight = ctxU3.canvas.height;
+  ctxU3.clearRect(0,0,canvasWidth,canvasHeight);
+  
+  const cx = canvasWidth/2, cy = canvasHeight/2;
+  ctxU3.save();
+  ctxU3.translate(cx,cy);
+  
+  const S = 70 * DPR();
+  const f = Math.max(0.001, +pairs.freq.r.value);
+  const cycles = Math.max(1, +pairs.cycles3D.r.value || 2);
+  
+  // Z축 방향 (음수로 확장)
+  const totalCycles = cycles * 3;
+  const zStart = 0;
+  const zEnd = -totalCycles;
+  
+  // 현재 UVW 값
+  const [u,v,w] = uvwAt(t);
+  
+  // 3D 좌표축 그리기
+  ctxU3.strokeStyle = '#2b3c63';
+  ctxU3.lineWidth = 1.5;
+  
+  // X축
+  let pX1 = project3D(-2, 0, 0);
+  let pX2 = project3D(2, 0, 0);
+  ctxU3.beginPath();
+  ctxU3.moveTo(pX1[0], -pX1[1]);
+  ctxU3.lineTo(pX2[0], -pX2[1]);
+  ctxU3.stroke();
+  
+  // Y축
+  let pY1 = project3D(0, -2, 0);
+  let pY2 = project3D(0, 2, 0);
+  ctxU3.beginPath();
+  ctxU3.moveTo(pY1[0], -pY1[1]);
+  ctxU3.lineTo(pY2[0], -pY2[1]);
+  ctxU3.stroke();
+  
+  // Z축 (시간)
+  let pZ1 = project3D(0, 0, zStart);
+  let pZ2 = project3D(0, 0, zEnd);
+  ctxU3.beginPath();
+  ctxU3.moveTo(pZ1[0], -pZ1[1]);
+  ctxU3.lineTo(pZ2[0], -pZ2[1]);
+  ctxU3.stroke();
+  
+  // 축 라벨
+  ctxU3.fillStyle = '#cfe0ff';
+  ctxU3.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+  ctxU3.fillText('α', pX2[0] + 10, -pX2[1]);
+  ctxU3.fillText('β', pY2[0] + 10, -pY2[1]);
+  ctxU3.fillText('t', pZ2[0] + 10, -pZ2[1]);
+  
+  // XY 평면 (원형) - 반투명
+  ctxU3.fillStyle = 'rgba(100, 100, 100, 0.05)';
+  ctxU3.strokeStyle = 'rgba(100, 100, 100, 0.2)';
+  const circleSteps = 60;
+  ctxU3.beginPath();
+  for(let i = 0; i <= circleSteps; i++){
+    const angle = (i / circleSteps) * Math.PI * 2;
+    const x = Math.cos(angle) * 1.5;
+    const y = Math.sin(angle) * 1.5;
+    const p = project3D(x, y, 0);
+    if(i === 0) ctxU3.moveTo(p[0], -p[1]);
+    else ctxU3.lineTo(p[0], -p[1]);
+  }
+  ctxU3.closePath();
+  ctxU3.fill();
+  ctxU3.stroke();
+  
+  // 3상 축 표시 (120도 간격)
+  const phaseAxes = [
+    {angle: 0, color: COLOR_U, label: 'U'},
+    {angle: 120, color: COLOR_V, label: 'V'},
+    {angle: 240, color: COLOR_W, label: 'W'}
+  ];
+  
+  phaseAxes.forEach(axis => {
+    const rad = axis.angle * Math.PI / 180;
+    const xAxis = Math.cos(rad) * 1.8;
+    const yAxis = Math.sin(rad) * 1.8;
+    
+    const p1 = project3D(0, 0, 0);
+    const p2 = project3D(xAxis, yAxis, 0);
+    
+    ctxU3.strokeStyle = axis.color;
+    ctxU3.lineWidth = 1;
+    ctxU3.setLineDash([4, 4]);
+    ctxU3.beginPath();
+    ctxU3.moveTo(p1[0], -p1[1]);
+    ctxU3.lineTo(p2[0], -p2[1]);
+    ctxU3.stroke();
+    ctxU3.setLineDash([]);
+    
+    ctxU3.fillStyle = axis.color;
+    ctxU3.fillText(axis.label, p2[0] + 10, -p2[1]);
+  });
+  
+  // 각 상의 3D 궤적
+  const N = 360 * totalCycles;
+  const timeRange = totalCycles / f;
+  
+  // U상 벡터 궤적
+  ctxU3.strokeStyle = COLOR_U;
+  ctxU3.lineWidth = 1.5;
+  ctxU3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const z = zStart + phase * (zEnd - zStart);
+    
+    // U축 방향 (0도)
+    const xPos = ui;
+    const yPos = 0;
+    
+    const p = project3D(xPos, -yPos, z);
+    if(i === 0) ctxU3.moveTo(p[0], -p[1]);
+    else ctxU3.lineTo(p[0], -p[1]);
+  }
+  ctxU3.stroke();
+  
+  // V상 벡터 궤적
+  ctxU3.strokeStyle = COLOR_V;
+  ctxU3.lineWidth = 1.5;
+  ctxU3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const z = zStart + phase * (zEnd - zStart);
+    
+    // V축 방향 (120도)
+    const vAngle = 120 * Math.PI / 180;
+    const xPos = vi * Math.cos(vAngle);
+    const yPos = vi * Math.sin(vAngle);
+    
+    const p = project3D(xPos, -yPos, z);
+    if(i === 0) ctxU3.moveTo(p[0], -p[1]);
+    else ctxU3.lineTo(p[0], -p[1]);
+  }
+  ctxU3.stroke();
+  
+  // W상 벡터 궤적
+  ctxU3.strokeStyle = COLOR_W;
+  ctxU3.lineWidth = 1.5;
+  ctxU3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const z = zStart + phase * (zEnd - zStart);
+    
+    // W축 방향 (240도)
+    const wAngle = 240 * Math.PI / 180;
+    const xPos = wi * Math.cos(wAngle);
+    const yPos = wi * Math.sin(wAngle);
+    
+    const p = project3D(xPos, -yPos, z);
+    if(i === 0) ctxU3.moveTo(p[0], -p[1]);
+    else ctxU3.lineTo(p[0], -p[1]);
+  }
+  ctxU3.stroke();
+  
+  // 합성 벡터 나선 - UVW 벡터들의 직접 합성으로 계산
+  ctxU3.strokeStyle = 'rgba(255, 204, 0, 0.9)';
+  ctxU3.lineWidth = 2.5;
+  ctxU3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const z = zStart + phase * (zEnd - zStart);
+    
+    // UVW 벡터들의 직접 합성 (Clarke 변환 대신)
+    const uAngle = 0 * Math.PI / 180;
+    const vAngle = 120 * Math.PI / 180;
+    const wAngle = 240 * Math.PI / 180;
+    
+    const sumX = ui * Math.cos(uAngle) + vi * Math.cos(vAngle) + wi * Math.cos(wAngle);
+    const sumY = ui * Math.sin(uAngle) + vi * Math.sin(vAngle) + wi * Math.sin(wAngle);
+    
+    const p = project3D(-sumX, -sumY, z);
+    if(i === 0) ctxU3.moveTo(p[0], -p[1]);
+    else ctxU3.lineTo(p[0], -p[1]);
+  }
+  ctxU3.stroke();
+  
+  // 현재 시점의 벡터들
+  const currentZ = zStart;
+  
+  // U 벡터
+  const uX = u;
+  const uY = 0;
+  const pU = project3D(uX, uY, currentZ);
+  const pO = project3D(0, 0, currentZ);
+  
+  ctxU3.strokeStyle = COLOR_U;
+  ctxU3.lineWidth = 2.5;
+  ctxU3.beginPath();
+  ctxU3.moveTo(pO[0], -pO[1]);
+  ctxU3.lineTo(pU[0], -pU[1]);
+  ctxU3.stroke();
+  
+  // V 벡터
+  const vAngle = 120 * Math.PI / 180;
+  const vX = v * Math.cos(vAngle);
+  const vY = v * Math.sin(vAngle);
+  const pV = project3D(vX, vY, currentZ);
+  
+  ctxU3.strokeStyle = COLOR_V;
+  ctxU3.lineWidth = 2.5;
+  ctxU3.beginPath();
+  ctxU3.moveTo(pO[0], -pO[1]);
+  ctxU3.lineTo(pV[0], -pV[1]);
+  ctxU3.stroke();
+  
+  // W 벡터
+  const wAngle = 240 * Math.PI / 180;
+  const wX = w * Math.cos(wAngle);
+  const wY = w * Math.sin(wAngle);
+  const pW = project3D(wX, wY, currentZ);
+  
+  ctxU3.strokeStyle = COLOR_W;
+  ctxU3.lineWidth = 2.5;
+  ctxU3.beginPath();
+  ctxU3.moveTo(pO[0], -pO[1]);
+  ctxU3.lineTo(pW[0], -pW[1]);
+  ctxU3.stroke();
+  
+  // 합성 벡터 (현재) - UVW 벡터 직접 합성
+  const uAngle = 0 * Math.PI / 180;
+  const vAngle2 = 120 * Math.PI / 180;
+  const wAngle2 = 240 * Math.PI / 180;
+  
+  const sumX = u * Math.cos(uAngle) + v * Math.cos(vAngle2) + w * Math.cos(wAngle2);
+  const sumY = u * Math.sin(uAngle) + v * Math.sin(vAngle2) + w * Math.sin(wAngle2);
+  
+  const pSum = project3D(sumX, sumY, currentZ);
+  
+  ctxU3.strokeStyle = '#FFCC00';
+  ctxU3.lineWidth = 3;
+  ctxU3.beginPath();
+  ctxU3.moveTo(pO[0], -pO[1]);
+  ctxU3.lineTo(pSum[0], -pSum[1]);
+  ctxU3.stroke();
+  
+  ctxU3.fillStyle = '#FFCC00';
+  ctxU3.beginPath();
+  ctxU3.arc(pSum[0], -pSum[1], 5*DPR(), 0, Math.PI*2);
+  ctxU3.fill();
+  
+  // 벡터 합성 과정 시각화 (점선)
+  ctxU3.setLineDash([3, 3]);
+  ctxU3.strokeStyle = COLOR_U;
+  ctxU3.lineWidth = 1.2;
+  ctxU3.beginPath();
+  ctxU3.moveTo(pO[0], -pO[1]);
+  ctxU3.lineTo(pU[0], -pU[1]);
+  ctxU3.stroke();
+  
+  ctxU3.strokeStyle = COLOR_V;
+  ctxU3.beginPath();
+  ctxU3.moveTo(pU[0], -pU[1]);
+  const pUV = project3D(uX + vX, uY + vY, currentZ);
+  ctxU3.lineTo(pUV[0], -pUV[1]);
+  ctxU3.stroke();
+  
+  ctxU3.strokeStyle = COLOR_W;
+  ctxU3.beginPath();
+  ctxU3.moveTo(pUV[0], -pUV[1]);
+  ctxU3.lineTo(pSum[0], -pSum[1]);
+  ctxU3.stroke();
+  ctxU3.setLineDash([]);
+  
+  ctxU3.restore();
+}
+    // drawUVWStatic 함수 수정 - 정규화 관련 코드 제거
+    function drawUVWStatic(t){
+      const cw = ctxUS.canvas.width, ch = ctxUS.canvas.height; 
+      drawGrid(ctxUS);
+      const S = 90 * DPR();
+      ctxUS.save(); 
+      ctxUS.translate(cw/2, ch/2);
+      
+      const axes = [
+        {ang: 0,     lab:'+U', col:COLOR_U},
+        {ang: 120,   lab:'+V', col:COLOR_V},
+        {ang: 240,   lab:'+W', col:COLOR_W},
+      ];
+      
+      ctxUS.lineWidth = 1.25; 
+      ctxUS.strokeStyle = '#2b3c63'; 
+      ctxUS.fillStyle = '#cfe0ff';
+      ctxUS.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      
+      axes.forEach(a=>{
+        const th = a.ang * Math.PI/180;
+        const x = Math.cos(th)*S*1.1, y = -Math.sin(th)*S*1.1;
+        ctxUS.beginPath(); 
+        ctxUS.moveTo(-x,-y); 
+        ctxUS.lineTo(x,y); 
+        ctxUS.stroke();
+        ctxUS.fillStyle = a.col; 
+        ctxUS.fillText(a.lab, x + (x>=0?6:-20), y + (y>=0?-16:6));
+        ctxUS.fillStyle = '#cfe0ff';
+      });
+      
+      const [u,v,w] = uvwAt(t);
+      const [alpha, beta] = clarke(u,v,w);
+      const alphaX = alpha * S;
+      const betaY = -beta * S;
+      
+      const vectors = [
+        {ang:0,   val:u, col:COLOR_U},
+        {ang:120, val:v, col:COLOR_V},
+        {ang:240, val:w, col:COLOR_W},
+      ];
+      
+      let accumX = 0, accumY = 0;
+      
+      vectors.forEach((vec, idx) => {
+        const th = vec.ang * Math.PI/180;
+        const px = Math.cos(th) * vec.val * S;
+        const py = -Math.sin(th) * vec.val * S;
+        
+        ctxUS.beginPath(); 
+        ctxUS.moveTo(0,0); 
+        ctxUS.lineTo(px,py);
+        ctxUS.strokeStyle = vec.col; 
+        ctxUS.lineWidth = 2.2; 
+        ctxUS.stroke();
+        ctxUS.beginPath(); 
+        ctxUS.arc(px,py,4*DPR(),0,Math.PI*2); 
+        ctxUS.fillStyle = vec.col; 
+        ctxUS.fill();
+        
+        ctxUS.setLineDash([4,4]);
+        ctxUS.beginPath();
+        ctxUS.moveTo(accumX, accumY);
+        ctxUS.lineTo(accumX + px, accumY + py);
+        ctxUS.strokeStyle = vec.col;
+        ctxUS.lineWidth = 1.8;
+        ctxUS.stroke();
+        ctxUS.setLineDash([]);
+        
+        accumX += px;
+        accumY += py;
+      });
+
+      ctxUS.beginPath();
+      ctxUS.moveTo(0, 0);
+      ctxUS.lineTo(alphaX, betaY);
+      ctxUS.strokeStyle = '#FFCC00';
+      ctxUS.lineWidth = 2.4;
+      ctxUS.stroke();
+      ctxUS.beginPath();
+      ctxUS.arc(alphaX, betaY, 4.5 * DPR(), 0, Math.PI * 2);
+      ctxUS.fillStyle = '#FFCC00';
+      ctxUS.fill();
+
+      const f = Math.max(0, +pairs.freq.r.value);
+      if (f > 1e-6){
+        const T = 1/f;
+        const N = 720;
+        ctxUS.beginPath();
+        for (let i=0; i<=N; i++){
+          const ti = t - T + (i/N)*T;
+          const [ui,vi,wi] = uvwAt(ti);
+          const [aa,bb] = clarke(ui,vi,wi);
+          const px = aa * S, py = -bb * S;
+          if (i===0) ctxUS.moveTo(px,py); 
+          else ctxUS.lineTo(px,py);
+        }
+        ctxUS.strokeStyle = '#9dd7ff'; 
+        ctxUS.lineWidth = 1.6; 
+        ctxUS.stroke();
+      }
+
+      ctxUS.restore();
+    }
+
+    // Park transform
+    function thetaE(t){
+      const fe = syncTheta && syncTheta.checked ? +pairs.freq.r.value : +pairs.fe.r.value;
+      return deg2rad(+pairs.theta0.r.value) + 2*Math.PI*fe*t;
+    }
+    
+    function parkFromAlphaBeta(a,b,th){
+      const c = Math.cos(th), s = Math.sin(th);
+      const d =  a*c + b*s;
+      const q = -a*s + b*c;
+      return [d,q];
+    }
+
+    function drawAxesWithLabelsGeneric(ctx, xLab, yLab){
+      const w = ctx.canvas.width, h = ctx.canvas.height;
+      ctx.save(); ctx.translate(w/2, h/2);
+      ctx.strokeStyle = '#2b3c63'; ctx.lineWidth = 1.25;
+      ctx.beginPath(); ctx.moveTo(-w/2,0); ctx.lineTo(w/2,0); ctx.moveTo(0,-h/2); ctx.lineTo(0,h/2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w/2-10, -4); ctx.lineTo(w/2, 0); ctx.lineTo(w/2-10, 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-4, -h/2+10); ctx.lineTo(0, -h/2); ctx.lineTo(4, -h/2+10); ctx.stroke();
+      ctx.fillStyle = '#cfe0ff'; ctx.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      ctx.fillText(xLab, w/2 - 40, -8);
+      ctx.fillText(yLab, 8, -h/2 + 18);
+      ctx.restore();
+    }
+
+    function drawParkTime(t){
+      const w = ctxDT.canvas.width, h = ctxDT.canvas.height; drawGrid(ctxDT);
+      const N = 600; const dt = (1/1200) / +pairs.tscale.r.value;
+      ctxDT.lineWidth = 1.25; ctxDT.strokeStyle = '#2b3c63';
+      ctxDT.beginPath(); ctxDT.moveTo(0, h/2); ctxDT.lineTo(w, h/2); ctxDT.stroke();
+      ctxDT.fillStyle = '#cfe0ff'; ctxDT.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      ctxDT.fillText('d(t)', 10, 16); ctxDT.fillText('q(t)', 60, 16);
+
+      const series = [ {key:'d', color:COLOR_D}, {key:'q', color:COLOR_Q} ];
+      series.forEach((sObj)=>{
+        ctxDT.beginPath();
+        for(let i=0;i<N;i++){
+          const ti = t - (N-i)*dt;
+          const [u,v,wv] = uvwAt(ti); const [a,b] = clarke(u,v,wv); const th = thetaE(ti);
+          const [d,q] = parkFromAlphaBeta(a,b,th);
+          const y = (sObj.key==='d') ? d : q;
+          const px = (i/(N-1))*w; const py = h/2 - y * 60 * DPR();
+          if(i===0) ctxDT.moveTo(px,py); else ctxDT.lineTo(px,py);
+        }
+        ctxDT.strokeStyle = sObj.color; ctxDT.lineWidth = 2; ctxDT.stroke();
+      });
+    }
+
+    // drawParkStatic 함수 수정 - 그리드도 함께 회전
+    function drawParkStatic(t){
+      const cw = ctxDS.canvas.width, ch = ctxDS.canvas.height; 
+      
+      ctxDS.clearRect(0,0,cw,ch);
+      
+      const S = 90 * DPR();
+      ctxDS.save(); 
+      ctxDS.translate(cw/2, ch/2);
+      
+      // 회전각 계산
+      const th = thetaE(t);
+      
+      // 전체 좌표계 회전 (그리드 포함)
+      ctxDS.save();
+      ctxDS.rotate(-th);
+      
+      // 회전된 그리드 그리기
+      ctxDS.strokeStyle = '#1a2744';
+      ctxDS.lineWidth = 1;
+      const step = 40 * DPR();
+      const gridSize = Math.max(cw, ch) * 1.5; // 회전시 모서리까지 커버
+      
+      ctxDS.beginPath();
+      for(let x = -gridSize; x <= gridSize; x += step){
+        ctxDS.moveTo(x, -gridSize);
+        ctxDS.lineTo(x, gridSize);
+      }
+      for(let y = -gridSize; y <= gridSize; y += step){
+        ctxDS.moveTo(-gridSize, y);
+        ctxDS.lineTo(gridSize, y);
+      }
+      ctxDS.stroke();
+      
+      // 회전된 dq 축 그리기
+      ctxDS.strokeStyle = COLOR_D; 
+      ctxDS.lineWidth = 1.5;
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(-ch/2,0); 
+      ctxDS.lineTo(ch/2,0);
+      ctxDS.stroke();
+
+      ctxDS.strokeStyle = COLOR_Q; 
+      ctxDS.lineWidth = 1.5;
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(0,-ch/2); 
+      ctxDS.lineTo(0,ch/2); 
+      ctxDS.stroke();
+      
+      // 축 화살표
+      ctxDS.strokeStyle = COLOR_D; 
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(ch/2-10, -4); 
+      ctxDS.lineTo(ch/2, 0); 
+      ctxDS.lineTo(ch/2-10, 4); 
+      ctxDS.stroke();
+
+      ctxDS.strokeStyle = COLOR_Q; 
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(-4, -ch/2+10); 
+      ctxDS.lineTo(0, -ch/2); 
+      ctxDS.lineTo(4, -ch/2+10); 
+      ctxDS.stroke();
+      
+      // 축 라벨
+      ctxDS.fillStyle = COLOR_D; 
+      ctxDS.font = `${Math.round(14*DPR())}px ui-monospace, monospace`;
+      ctxDS.textAlign = 'center';
+      ctxDS.fillText('d', cw/2 - 30, -8);
+      
+      ctxDS.fillStyle = COLOR_Q;
+      ctxDS.fillText('q', 8, -ch/2 + 18);
+      
+      const [u,v,w] = uvwAt(t); 
+      const [a,b] = clarke(u,v,w); 
+      const [d,q] = parkFromAlphaBeta(a,b,th);
+      
+      // dq 벡터 (회전 좌표계 내에서)
+      const vx = d * S, vy = -q * S;
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(0,0); 
+      ctxDS.lineTo(vx,vy); 
+      ctxDS.strokeStyle = '#FFCC00'; 
+      ctxDS.lineWidth = 2.8; 
+      ctxDS.stroke();
+      ctxDS.beginPath(); 
+      ctxDS.arc(vx,vy,5*DPR(),0,Math.PI*2); 
+      ctxDS.fillStyle = '#FFCC00'; 
+      ctxDS.fill();
+      
+      // d, q 성분
+      ctxDS.lineWidth = 2.2; 
+      ctxDS.strokeStyle = COLOR_D; 
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(0,0); 
+      ctxDS.lineTo(vx,0); 
+      ctxDS.stroke();
+      ctxDS.fillStyle = COLOR_D; 
+      ctxDS.beginPath(); 
+      ctxDS.arc(vx,0,4.5*DPR(),0,Math.PI*2); 
+      ctxDS.fill();
+      
+      ctxDS.strokeStyle = COLOR_Q; 
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(0,0); 
+      ctxDS.lineTo(0,vy); 
+      ctxDS.stroke();
+      ctxDS.fillStyle = COLOR_Q; 
+      ctxDS.beginPath(); 
+      ctxDS.arc(0,vy,4.5*DPR(),0,Math.PI*2); 
+      ctxDS.fill();
+      
+      // 점선 가이드
+      ctxDS.setLineDash([5,5]);
+      ctxDS.strokeStyle = COLOR_D; 
+      ctxDS.lineWidth = 1.5;
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(vx,vy); 
+      ctxDS.lineTo(vx,0); 
+      ctxDS.stroke();
+      ctxDS.strokeStyle = COLOR_Q; 
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(vx,vy); 
+      ctxDS.lineTo(0,vy); 
+      ctxDS.stroke();
+      ctxDS.setLineDash([]);
+      
+      // 값 라벨
+      ctxDS.font = `${Math.round(13*DPR())}px ui-monospace, monospace`;
+      ctxDS.fillStyle = COLOR_D; 
+      ctxDS.textAlign = 'left'; 
+      ctxDS.textBaseline = 'middle';
+      ctxDS.fillText(`d=${d.toFixed(3)}`, vx + 8*DPR(), -12*DPR());
+      ctxDS.fillStyle = COLOR_Q; 
+      ctxDS.textAlign = 'center'; 
+      ctxDS.textBaseline = 'top';
+      ctxDS.fillText(`q=${q.toFixed(3)}`, -12*DPR(), vy + 8*DPR());
+      
+      ctxDS.restore(); // 회전 복원
+      
+      // 정지 좌표계 참조 (회전하지 않는 상태에서)
+      
+      // αβ 궤적 (정지좌표계)
+      const f = Math.max(0, +pairs.freq.r.value);
+      if (f > 1e-6){
+        const T = 1/f;
+        const N = 360;
+        ctxDS.beginPath();
+        for (let i=0; i<=N; i++){
+          const ti = t - T + (i/N)*T;
+          const [ui,vi,wi] = uvwAt(ti);
+          const [ai,bi] = clarke(ui,vi,wi);
+          const px = ai * S, py = -bi * S;
+          if (i===0) ctxDS.moveTo(px,py); 
+          else ctxDS.lineTo(px,py);
+        }
+        ctxDS.strokeStyle = 'rgba(157, 215, 255, 0.25)'; 
+        ctxDS.lineWidth = 1.5; 
+        ctxDS.stroke();
+      }
+      
+      // 현재 αβ 벡터 (정지 좌표계)
+      const px = a * S, py = -b * S;
+      ctxDS.beginPath(); 
+      ctxDS.moveTo(0,0); 
+      ctxDS.lineTo(px,py);
+      ctxDS.strokeStyle = 'rgba(74, 163, 255, 0.3)'; 
+      ctxDS.lineWidth = 2; 
+      ctxDS.stroke();
+      
+      // 회전각 표시
+      ctxDS.beginPath();
+      ctxDS.arc(0, 0, 45*DPR(), 0, -th, true);
+      ctxDS.strokeStyle = '#4aa3ff';
+      ctxDS.lineWidth = 1.8;
+      ctxDS.stroke();
+      
+      // 화살표 머리
+      const arrowTip = -th;
+      const arrowSize = 6*DPR();
+      const arrowX = Math.cos(arrowTip) * 45*DPR();
+      const arrowY = Math.sin(arrowTip) * 45*DPR();
+      ctxDS.beginPath();
+      ctxDS.moveTo(arrowX, arrowY);
+      ctxDS.lineTo(
+        arrowX - arrowSize*Math.cos(arrowTip - 0.5),
+        arrowY - arrowSize*Math.sin(arrowTip - 0.5)
+      );
+      ctxDS.moveTo(arrowX, arrowY);
+      ctxDS.lineTo(
+        arrowX - arrowSize*Math.cos(arrowTip + 0.5),
+        arrowY - arrowSize*Math.sin(arrowTip + 0.5)
+      );
+      ctxDS.stroke();
+      
+      ctxDS.fillStyle = '#4aa3ff';
+      ctxDS.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      ctxDS.textAlign = 'center';
+      ctxDS.textBaseline = 'middle';
+      const labelX = Math.cos(-th/2) * 60 * DPR();
+      const labelY = Math.sin(-th/2) * 60 * DPR();
+      ctxDS.fillText(`θe=${(th*180/Math.PI % 360).toFixed(0)}°`, labelX, labelY);
+      
+      ctxDS.restore();
+    }
+
+function drawPark3D(t){
+  const w = ctxD3.canvas.width, h = ctxD3.canvas.height;
+  ctxD3.clearRect(0,0,w,h);
+  
+  const cx = w/2, cy = h/2;
+  ctxD3.save();
+  ctxD3.translate(cx, cy);
+  
+  const S = 80 * DPR();
+  const f = Math.max(0.001, +pairs.freq.r.value);
+  const cycles = Math.max(1, +pairs.cycles3D.r.value || 2);
+  
+  // Z축 방향 (음수로 확장)
+  const totalCycles = cycles * 3;
+  const zStart = 0;
+  const zEnd = -totalCycles;
+  
+  // 현재 dq 값
+  const [u,v,wv] = uvwAt(t);
+  const [a,b] = clarke(u,v,wv);
+  const th = thetaE(t);
+  const [d,q] = parkFromAlphaBeta(a,b,th);
+  
+  // 투영 평면 위치
+  const Q_WALL = 1.8;
+  const D_FLOOR = -1.8;
+  
+  // 3D 좌표축
+  ctxD3.strokeStyle = '#2b3c63';
+  ctxD3.lineWidth = 1.5;
+  
+  // X축 (d)
+  let pX1 = project3D(-2, 0, 0);
+  let pX2 = project3D(2, 0, 0);
+  ctxD3.beginPath();
+  ctxD3.moveTo(pX1[0], -pX1[1]);
+  ctxD3.lineTo(pX2[0], -pX2[1]);
+  ctxD3.stroke();
+  
+  // Y축 (q)  
+  let pY1 = project3D(0, -2, 0);
+  let pY2 = project3D(0, 2, 0);
+  ctxD3.beginPath();
+  ctxD3.moveTo(pY1[0], -pY1[1]);
+  ctxD3.lineTo(pY2[0], -pY2[1]);
+  ctxD3.stroke();
+  
+  // Z축 (시간)
+  let pZ1 = project3D(0, 0, zStart);
+  let pZ2 = project3D(0, 0, zEnd);
+  ctxD3.beginPath();
+  ctxD3.moveTo(pZ1[0], -pZ1[1]);
+  ctxD3.lineTo(pZ2[0], -pZ2[1]);
+  ctxD3.stroke();
+  
+  // 축 라벨
+  ctxD3.fillStyle = COLOR_D;
+  ctxD3.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+  ctxD3.fillText('d', pX2[0] + 10, -pX2[1]);
+  
+  ctxD3.fillStyle = COLOR_Q;
+  ctxD3.fillText('q', pY2[0] + 10, -pY2[1]);
+  
+  ctxD3.fillStyle = '#cfe0ff';
+  ctxD3.fillText('t', pZ2[0] + 10, -pZ2[1]);
+  
+  // 바닥면 (d-시간 평면)
+  ctxD3.fillStyle = 'rgba(255, 93, 108, 0.08)';
+  ctxD3.strokeStyle = 'rgba(255, 93, 108, 0.3)';
+  ctxD3.lineWidth = 0.5;
+  ctxD3.beginPath();
+  let p1 = project3D(-1.5, D_FLOOR, zStart);
+  let p2 = project3D(1.5, D_FLOOR, zStart);
+  let p3 = project3D(1.5, D_FLOOR, zEnd);
+  let p4 = project3D(-1.5, D_FLOOR, zEnd);
+  ctxD3.moveTo(p1[0], -p1[1]);
+  ctxD3.lineTo(p2[0], -p2[1]);
+  ctxD3.lineTo(p3[0], -p3[1]);
+  ctxD3.lineTo(p4[0], -p4[1]);
+  ctxD3.closePath();
+  ctxD3.fill();
+  ctxD3.stroke();
+  
+  // 오른쪽 벽면 (q-시간 평면)
+  ctxD3.fillStyle = 'rgba(74, 163, 255, 0.08)';
+  ctxD3.strokeStyle = 'rgba(74, 163, 255, 0.3)';
+  ctxD3.beginPath();
+  p1 = project3D(Q_WALL, -1.5, zStart);
+  p2 = project3D(Q_WALL, 1.5, zStart);
+  p3 = project3D(Q_WALL, 1.5, zEnd);
+  p4 = project3D(Q_WALL, -1.5, zEnd);
+  ctxD3.moveTo(p1[0], -p1[1]);
+  ctxD3.lineTo(p2[0], -p2[1]);
+  ctxD3.lineTo(p3[0], -p3[1]);
+  ctxD3.lineTo(p4[0], -p4[1]);
+  ctxD3.closePath();
+  ctxD3.fill();
+  ctxD3.stroke();
+  
+  // dq 평면 (원형 - DC 성분을 나타냄)
+  ctxD3.fillStyle = 'rgba(255, 204, 0, 0.05)';
+  ctxD3.strokeStyle = 'rgba(255, 204, 0, 0.2)';
+  const circleSteps = 60;
+  ctxD3.beginPath();
+  for(let i = 0; i <= circleSteps; i++){
+    const angle = (i / circleSteps) * Math.PI * 2;
+    const x = Math.cos(angle) * 1.5;
+    const y = Math.sin(angle) * 1.5;
+    const p = project3D(x, y, 0);
+    if(i === 0) ctxD3.moveTo(p[0], -p[1]);
+    else ctxD3.lineTo(p[0], -p[1]);
+  }
+  ctxD3.closePath();
+  ctxD3.fill();
+  ctxD3.stroke();
+  
+  // 3D dq 궤적 (이상적으로는 직선이어야 함)
+  const N = 360 * totalCycles;
+  const timeRange = totalCycles / f;
+  
+  ctxD3.strokeStyle = 'rgba(255, 204, 0, 0.8)';
+  ctxD3.lineWidth = 2;
+  ctxD3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const [ai,bi] = clarke(ui,vi,wi);
+    const thi = thetaE(ti);
+    const [di,qi] = parkFromAlphaBeta(ai,bi,thi);
+    
+    const z = zStart + phase * (zEnd - zStart);
+    const p = project3D(di, qi, z);
+    if(i === 0) ctxD3.moveTo(p[0], -p[1]);
+    else ctxD3.lineTo(p[0], -p[1]);
+  }
+  ctxD3.stroke();
+  
+  // d(t) 투영 - 바닥면
+  ctxD3.strokeStyle = COLOR_D;
+  ctxD3.lineWidth = 2.5;
+  ctxD3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const [ai,bi] = clarke(ui,vi,wi);
+    const thi = thetaE(ti);
+    const [di,qi] = parkFromAlphaBeta(ai,bi,thi);
+    
+    const z = zStart + phase * (zEnd - zStart);
+    const p = project3D(di, D_FLOOR, z);
+    if(i === 0) ctxD3.moveTo(p[0], -p[1]);
+    else ctxD3.lineTo(p[0], -p[1]);
+  }
+  ctxD3.stroke();
+  
+  // q(t) 투영 - 오른쪽 벽면
+  ctxD3.strokeStyle = COLOR_Q;
+  ctxD3.lineWidth = 2.5;
+  ctxD3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const [ai,bi] = clarke(ui,vi,wi);
+    const thi = thetaE(ti);
+    const [di,qi] = parkFromAlphaBeta(ai,bi,thi);
+    
+    const z = zStart + phase * (zEnd - zStart);
+    const p = project3D(Q_WALL, qi, z);
+    if(i === 0) ctxD3.moveTo(p[0], -p[1]);
+    else ctxD3.lineTo(p[0], -p[1]);
+  }
+  ctxD3.stroke();
+  
+  // 현재 dq 벡터
+  const currentZ = zStart;
+  const pCurrent = project3D(d, q, currentZ);
+  const pD = project3D(d, D_FLOOR, currentZ);
+  const pQ = project3D(Q_WALL, q, currentZ);
+  const pOrigin = project3D(0, 0, currentZ);
+  
+  // 현재 벡터 (노란색)
+  ctxD3.strokeStyle = '#FFCC00';
+  ctxD3.lineWidth = 3;
+  ctxD3.beginPath();
+  ctxD3.moveTo(pOrigin[0], -pOrigin[1]);
+  ctxD3.lineTo(pCurrent[0], -pCurrent[1]);
+  ctxD3.stroke();
+  
+  ctxD3.fillStyle = '#FFCC00';
+  ctxD3.beginPath();
+  ctxD3.arc(pCurrent[0], -pCurrent[1], 5*DPR(), 0, Math.PI*2);
+  ctxD3.fill();
+  
+  // 투영선
+  ctxD3.setLineDash([4, 4]);
+  ctxD3.lineWidth = 1.5;
+  
+  // d 투영선
+  ctxD3.strokeStyle = COLOR_D;
+  ctxD3.beginPath();
+  ctxD3.moveTo(pCurrent[0], -pCurrent[1]);
+  ctxD3.lineTo(pD[0], -pD[1]);
+  ctxD3.stroke();
+  
+  // q 투영선
+  ctxD3.strokeStyle = COLOR_Q;
+  ctxD3.beginPath();
+  ctxD3.moveTo(pCurrent[0], -pCurrent[1]);
+  ctxD3.lineTo(pQ[0], -pQ[1]);
+  ctxD3.stroke();
+  
+  ctxD3.setLineDash([]);
+  
+  // 투영점
+  ctxD3.fillStyle = COLOR_D;
+  ctxD3.beginPath();
+  ctxD3.arc(pD[0], -pD[1], 4*DPR(), 0, Math.PI*2);
+  ctxD3.fill();
+  
+  ctxD3.fillStyle = COLOR_Q;
+  ctxD3.beginPath();
+  ctxD3.arc(pQ[0], -pQ[1], 4*DPR(), 0, Math.PI*2);
+  ctxD3.fill();
+  
+  // 평면 라벨
+  ctxD3.fillStyle = COLOR_D;
+  ctxD3.font = `${Math.round(11*DPR())}px ui-monospace, monospace`;
+  const floorLabel = project3D(1.3, D_FLOOR, 0);
+  ctxD3.fillText('d(t)', floorLabel[0], -floorLabel[1]);
+  
+  ctxD3.fillStyle = COLOR_Q;
+  const wallLabel = project3D(Q_WALL, 1.3, 0);
+  ctxD3.fillText('q(t)', wallLabel[0], -wallLabel[1]);
+  
+  // DC 성분 표시 (이상적인 경우)
+  if (Math.abs(d) > 0.01 || Math.abs(q) > 0.01) {
+    ctxD3.fillStyle = '#FFCC00';
+    ctxD3.font = `${Math.round(10*DPR())}px ui-monospace, monospace`;
+    ctxD3.fillText(`DC: d=${d.toFixed(2)}, q=${q.toFixed(2)}`, 10, -h/2 + 20);
+  }
+  
+  ctxD3.restore();
+}
+
+    // Inverse transforms
+    function drawInvParkStatic(t){
+      const w = ctxIABS.canvas.width, h = ctxIABS.canvas.height; drawGrid(ctxIABS);
+      drawAxesWithLabels(ctxIABS);
+
+      const S = 90 * DPR();
+      ctxIABS.save();
+      ctxIABS.translate(w/2, h/2);
+
+      const f = Math.max(0, +pairs.freq.r.value);
+      let a=0, b=0;
+      if (f > 1e-6){
+        const T = 1/f;
+        const N = 720;
+        ctxIABS.beginPath();
+        for (let i=0; i<=N; i++){
+          const ti = t - T + (i/N)*T;
+          const [u,v,wv] = uvwAt(ti);
+          const [aa,bb] = clarke(u,v,wv);
+          const px = aa * S, py = -bb * S;
+          if (i===0) ctxIABS.moveTo(px,py); else ctxIABS.lineTo(px,py);
+          if (i===N){ a = aa; b = bb; }
+        }
+        ctxIABS.strokeStyle = '#9dd7ff'; ctxIABS.lineWidth = 1.6; ctxIABS.stroke();
+      } else {
+        const [u,v,wv] = uvwAt(t); [a,b] = clarke(u,v,wv);
+        ctxIABS.beginPath(); ctxIABS.arc(a*S, -b*S, 3.5*DPR(), 0, Math.PI*2); ctxIABS.fillStyle = '#9dd7ff'; ctxIABS.fill();
+      }
+
+      const vx = a * S, vy = -b * S;
+      ctxIABS.beginPath(); ctxIABS.moveTo(0,0); ctxIABS.lineTo(vx,vy); ctxIABS.strokeStyle = '#FFCC00'; ctxIABS.lineWidth = 2.4; ctxIABS.stroke();
+      ctxIABS.beginPath(); ctxIABS.arc(vx,vy,4.5*DPR(),0,Math.PI*2); ctxIABS.fillStyle = '#FFCC00'; ctxIABS.fill();
+
+      ctxIABS.lineWidth = 2;
+      ctxIABS.beginPath(); ctxIABS.moveTo(0,0); ctxIABS.lineTo(vx,0); ctxIABS.strokeStyle = COLOR_ALPHA; ctxIABS.stroke();
+      ctxIABS.beginPath(); ctxIABS.arc(vx,0,4*DPR(),0,Math.PI*2); ctxIABS.fillStyle = COLOR_ALPHA; ctxIABS.fill();
+      ctxIABS.beginPath(); ctxIABS.moveTo(0,0); ctxIABS.lineTo(0,vy); ctxIABS.strokeStyle = COLOR_BETA; ctxIABS.stroke();
+      ctxIABS.beginPath(); ctxIABS.arc(0,vy,4*DPR(),0,Math.PI*2); ctxIABS.fillStyle = COLOR_BETA; ctxIABS.fill();
+
+      ctxIABS.setLineDash([6,6]);
+      ctxIABS.beginPath(); ctxIABS.moveTo(vx,vy); ctxIABS.lineTo(vx,0); ctxIABS.strokeStyle = COLOR_ALPHA; ctxIABS.stroke();
+      ctxIABS.beginPath(); ctxIABS.moveTo(vx,vy); ctxIABS.lineTo(0,vy); ctxIABS.strokeStyle = COLOR_BETA; ctxIABS.stroke();
+      ctxIABS.setLineDash([]);
+
+      ctxIABS.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      ctxIABS.fillStyle = COLOR_ALPHA;
+      ctxIABS.textBaseline = 'middle';
+      ctxIABS.textAlign = 'center';
+      ctxIABS.fillText(`α = ${a.toFixed(3)}`, vx + 12*DPR(), -12*DPR());
+      ctxIABS.fillStyle = COLOR_BETA;
+      ctxIABS.textAlign = 'right';
+      ctxIABS.fillText(`β = ${b.toFixed(3)}`, -12*DPR(), vy);
+
+      ctxIABS.restore();
+    }
+
+    function drawInvParkTime(t){
+      const w = ctxIABT.canvas.width, h = ctxIABT.canvas.height; drawGrid(ctxIABT);
+      const N = 600; const dt = (1/1200) / +pairs.tscale.r.value;
+      ctxIABT.lineWidth = 1.25; ctxIABT.strokeStyle = '#2b3c63';
+      ctxIABT.beginPath(); ctxIABT.moveTo(0, h/2); ctxIABT.lineTo(w, h/2); ctxIABT.stroke();
+      ctxIABT.fillStyle = '#cfe0ff'; ctxIABT.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      ctxIABT.fillText('α(t)', 10, 16); ctxIABT.fillText('β(t)', 60, 16);
+
+      const series = [
+        {key:'alpha', color:COLOR_ALPHA},
+        {key:'beta',  color:COLOR_BETA}
+      ];
+
+      series.forEach((sObj)=>{
+        ctxIABT.beginPath();
+        for(let i=0;i<N;i++){
+          const ti = t - (N-i)*dt;
+          const [u,v,wv] = uvwAt(ti);
+          const [a,b] = clarke(u,v,wv);
+          const y = (sObj.key==='alpha') ? a : b;
+          const px = (i/(N-1))*w; const py = h/2 - y * 60 * DPR();
+          if(i===0) ctxIABT.moveTo(px,py); else ctxIABT.lineTo(px,py);
+        }
+        ctxIABT.strokeStyle = sObj.color; ctxIABT.lineWidth = 2; ctxIABT.stroke();
+      });
+    }
+
+    function drawInvPark3D(t){
+  const w = ctxIP3.canvas.width, h = ctxIP3.canvas.height;
+  ctxIP3.clearRect(0,0,w,h);
+  
+  const cx = w/2, cy = h/2;
+  ctxIP3.save();
+  ctxIP3.translate(cx, cy);
+  
+  const S = 80 * DPR();
+  const f = Math.max(0.001, +pairs.freq.r.value);
+  const cycles = Math.max(1, +pairs.cycles3D.r.value || 2);
+  
+  // Z축 방향 (음수로 확장)
+  const totalCycles = cycles * 3;
+  const zStart = 0;
+  const zEnd = -totalCycles;
+  
+  // 현재 값들
+  const [u,v,wv] = uvwAt(t);
+  const [a,b] = clarke(u,v,wv);
+  const th = thetaE(t);
+  const [d,q] = parkFromAlphaBeta(a,b,th);
+  
+  // Inv-Park: dq → αβ
+  const c = Math.cos(th), s = Math.sin(th);
+  const alpha_inv = d*c - q*s;
+  const beta_inv = d*s + q*c;
+  
+  // 투영 평면 위치
+  const BETA_WALL = 1.8;
+  const ALPHA_FLOOR = -1.8;
+  
+  // 3D 좌표축
+  ctxIP3.strokeStyle = '#2b3c63';
+  ctxIP3.lineWidth = 1.5;
+  
+  // X축 (α)
+  let pX1 = project3D(-2, 0, 0);
+  let pX2 = project3D(2, 0, 0);
+  ctxIP3.beginPath();
+  ctxIP3.moveTo(pX1[0], -pX1[1]);
+  ctxIP3.lineTo(pX2[0], -pX2[1]);
+  ctxIP3.stroke();
+  
+  // Y축 (β)  
+  let pY1 = project3D(0, -2, 0);
+  let pY2 = project3D(0, 2, 0);
+  ctxIP3.beginPath();
+  ctxIP3.moveTo(pY1[0], -pY1[1]);
+  ctxIP3.lineTo(pY2[0], -pY2[1]);
+  ctxIP3.stroke();
+  
+  // Z축 (시간)
+  let pZ1 = project3D(0, 0, zStart);
+  let pZ2 = project3D(0, 0, zEnd);
+  ctxIP3.beginPath();
+  ctxIP3.moveTo(pZ1[0], -pZ1[1]);
+  ctxIP3.lineTo(pZ2[0], -pZ2[1]);
+  ctxIP3.stroke();
+  
+  // 축 라벨
+  ctxIP3.fillStyle = '#cfe0ff';
+  ctxIP3.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+  ctxIP3.fillText('α', pX2[0] + 10, -pX2[1]);
+  ctxIP3.fillText('β', pY2[0] + 10, -pY2[1]);
+  ctxIP3.fillText('t', pZ2[0] + 10, -pZ2[1]);
+  
+  // 바닥면 (α-시간 평면)
+  ctxIP3.fillStyle = 'rgba(255, 93, 108, 0.08)';
+  ctxIP3.strokeStyle = 'rgba(255, 93, 108, 0.3)';
+  ctxIP3.lineWidth = 0.5;
+  ctxIP3.beginPath();
+  let p1 = project3D(-1.5, ALPHA_FLOOR, zStart);
+  let p2 = project3D(1.5, ALPHA_FLOOR, zStart);
+  let p3 = project3D(1.5, ALPHA_FLOOR, zEnd);
+  let p4 = project3D(-1.5, ALPHA_FLOOR, zEnd);
+  ctxIP3.moveTo(p1[0], -p1[1]);
+  ctxIP3.lineTo(p2[0], -p2[1]);
+  ctxIP3.lineTo(p3[0], -p3[1]);
+  ctxIP3.lineTo(p4[0], -p4[1]);
+  ctxIP3.closePath();
+  ctxIP3.fill();
+  ctxIP3.stroke();
+  
+  // 오른쪽 벽면 (β-시간 평면)
+  ctxIP3.fillStyle = 'rgba(74, 163, 255, 0.08)';
+  ctxIP3.strokeStyle = 'rgba(74, 163, 255, 0.3)';
+  ctxIP3.beginPath();
+  p1 = project3D(BETA_WALL, -1.5, zStart);
+  p2 = project3D(BETA_WALL, 1.5, zStart);
+  p3 = project3D(BETA_WALL, 1.5, zEnd);
+  p4 = project3D(BETA_WALL, -1.5, zEnd);
+  ctxIP3.moveTo(p1[0], -p1[1]);
+  ctxIP3.lineTo(p2[0], -p2[1]);
+  ctxIP3.lineTo(p3[0], -p3[1]);
+  ctxIP3.lineTo(p4[0], -p4[1]);
+  ctxIP3.closePath();
+  ctxIP3.fill();
+  ctxIP3.stroke();
+  
+  // XY 평면 (αβ 평면)
+  ctxIP3.fillStyle = 'rgba(255, 204, 0, 0.05)';
+  ctxIP3.strokeStyle = 'rgba(255, 204, 0, 0.2)';
+  const circleSteps = 60;
+  ctxIP3.beginPath();
+  for(let i = 0; i <= circleSteps; i++){
+    const angle = (i / circleSteps) * Math.PI * 2;
+    const x = Math.cos(angle) * 1.5;
+    const y = Math.sin(angle) * 1.5;
+    const p = project3D(x, y, 0);
+    if(i === 0) ctxIP3.moveTo(p[0], -p[1]);
+    else ctxIP3.lineTo(p[0], -p[1]);
+  }
+  ctxIP3.closePath();
+  ctxIP3.fill();
+  ctxIP3.stroke();
+  
+  // 3D 나선형 궤적 (역변환된 αβ)
+  const N = 360 * totalCycles;
+  const timeRange = totalCycles / f;
+  
+  ctxIP3.strokeStyle = 'rgba(255, 204, 0, 0.8)';
+  ctxIP3.lineWidth = 2;
+  ctxIP3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const [ai,bi] = clarke(ui,vi,wi);
+    const thi = thetaE(ti);
+    const [di,qi] = parkFromAlphaBeta(ai,bi,thi);
+    
+    // Inverse Park 변환
+    const ci = Math.cos(thi), si = Math.sin(thi);
+    const ai_inv = di*ci - qi*si;
+    const bi_inv = di*si + qi*ci;
+    
+    const z = zStart + phase * (zEnd - zStart);
+    const p = project3D(-ai_inv, -bi_inv, z);
+    if(i === 0) ctxIP3.moveTo(p[0], -p[1]);
+    else ctxIP3.lineTo(p[0], -p[1]);
+  }
+  ctxIP3.stroke();
+  
+  // α(t) 투영 - 바닥면
+  ctxIP3.strokeStyle = COLOR_ALPHA;
+  ctxIP3.lineWidth = 2.5;
+  ctxIP3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const [ai,bi] = clarke(ui,vi,wi);
+    const thi = thetaE(ti);
+    const [di,qi] = parkFromAlphaBeta(ai,bi,thi);
+    
+    const ci = Math.cos(thi), si = Math.sin(thi);
+    const ai_inv = di*ci - qi*si;
+    
+    const z = zStart + phase * (zEnd - zStart);
+    const p = project3D(-ai_inv, ALPHA_FLOOR, z);
+    if(i === 0) ctxIP3.moveTo(p[0], -p[1]);
+    else ctxIP3.lineTo(p[0], -p[1]);
+  }
+  ctxIP3.stroke();
+  
+  // β(t) 투영 - 오른쪽 벽면
+  ctxIP3.strokeStyle = COLOR_BETA;
+  ctxIP3.lineWidth = 2.5;
+  ctxIP3.beginPath();
+  for(let i = 0; i <= N; i++){
+    const phase = (i/N);
+    const ti = t - timeRange * (1 - phase);
+    const [ui,vi,wi] = uvwAt(ti);
+    const [ai,bi] = clarke(ui,vi,wi);
+    const thi = thetaE(ti);
+    const [di,qi] = parkFromAlphaBeta(ai,bi,thi);
+    
+    const ci = Math.cos(thi), si = Math.sin(thi);
+    const bi_inv = di*si + qi*ci;
+    
+    const z = zStart + phase * (zEnd - zStart);
+    const p = project3D(BETA_WALL, -bi_inv, z);
+    if(i === 0) ctxIP3.moveTo(p[0], -p[1]);
+    else ctxIP3.lineTo(p[0], -p[1]);
+  }
+  ctxIP3.stroke();
+  
+  // 현재 벡터
+  const currentZ = zStart;
+  const pCurrent = project3D(alpha_inv, beta_inv, currentZ);
+  const pOrigin = project3D(0, 0, currentZ);
+  
+  ctxIP3.strokeStyle = '#FFCC00';
+  ctxIP3.lineWidth = 3;
+  ctxIP3.beginPath();
+  ctxIP3.moveTo(pOrigin[0], -pOrigin[1]);
+  ctxIP3.lineTo(pCurrent[0], -pCurrent[1]);
+  ctxIP3.stroke();
+  
+  ctxIP3.fillStyle = '#FFCC00';
+  ctxIP3.beginPath();
+  ctxIP3.arc(pCurrent[0], -pCurrent[1], 5*DPR(), 0, Math.PI*2);
+  ctxIP3.fill();
+  
+  ctxIP3.restore();
+}
+
+    // drawInvClarkStatic 함수도 동일하게 수정
+    function drawInvClarkStatic(t){
+      const cw = ctxIuvwS.canvas.width, ch = ctxIuvwS.canvas.height; 
+      drawGrid(ctxIuvwS);
+      const S = 90 * DPR();
+      ctxIuvwS.save(); 
+      ctxIuvwS.translate(cw/2, ch/2);
+      
+      const axes = [
+        {ang: 0,     lab:'+U', col:COLOR_U},
+        {ang: 120,   lab:'+V', col:COLOR_V},
+        {ang: 240,   lab:'+W', col:COLOR_W},
+      ];
+      
+      ctxIuvwS.lineWidth = 1.25; 
+      ctxIuvwS.strokeStyle = '#2b3c63'; 
+      ctxIuvwS.fillStyle = '#cfe0ff';
+      ctxIuvwS.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      
+      axes.forEach(a=>{
+        const th = a.ang * Math.PI/180;
+        const x = Math.cos(th)*S*1.1, y = -Math.sin(th)*S*1.1;
+        ctxIuvwS.beginPath(); 
+        ctxIuvwS.moveTo(-x,-y); 
+        ctxIuvwS.lineTo(x,y); 
+        ctxIuvwS.stroke();
+        ctxIuvwS.fillStyle = a.col; 
+        ctxIuvwS.fillText(a.lab, x + (x>=0?6:-20), y + (y>=0?-16:6));
+        ctxIuvwS.fillStyle = '#cfe0ff';
+      });
+      
+      const [u,v,w] = uvwAt(t);
+      
+      // Clarke 변환으로 정확한 α, β 계산
+      const [alpha, beta] = clarke(u,v,w);
+      const alphaX = alpha * S;
+      const betaY = -beta * S;
+      
+      const vectors = [
+        {ang:0,   val:u, col:COLOR_U},
+        {ang:120, val:v, col:COLOR_V},
+        {ang:240, val:w, col:COLOR_W},
+      ];
+      
+      let accumX = 0, accumY = 0;
+      
+      vectors.forEach((vec, idx) => {
+        const th = vec.ang * Math.PI/180;
+        const px = Math.cos(th) * vec.val * S;
+        const py = -Math.sin(th) * vec.val * S;
+        
+        // 원점에서 시작하는 개별 벡터 (실선)
+        ctxIuvwS.beginPath(); 
+        ctxIuvwS.moveTo(0,0); 
+        ctxIuvwS.lineTo(px,py);
+        ctxIuvwS.strokeStyle = vec.col; 
+        ctxIuvwS.lineWidth = 2.2; 
+        ctxIuvwS.stroke();
+        ctxIuvwS.beginPath(); 
+        ctxIuvwS.arc(px,py,4*DPR(),0,Math.PI*2); 
+        ctxIuvwS.fillStyle = vec.col; 
+        ctxIuvwS.fill();
+        
+        // 벡터 합성 표시 (점선으로 이어붙이기)
+        ctxIuvwS.setLineDash([4,4]);
+        ctxIuvwS.beginPath();
+        ctxIuvwS.moveTo(accumX, accumY);
+        ctxIuvwS.lineTo(accumX + px, accumY + py);
+        ctxIuvwS.strokeStyle = vec.col;
+        ctxIuvwS.lineWidth = 1.8;
+        ctxIuvwS.stroke();
+        ctxIuvwS.setLineDash([]);
+        
+        // 누적
+        accumX += px;
+        accumY += py;
+      });
+
+      // 합성 벡터 (노란색)
+      ctxIuvwS.beginPath();
+      ctxIuvwS.moveTo(0, 0);
+      ctxIuvwS.lineTo(alphaX, betaY);
+      ctxIuvwS.strokeStyle = '#FFCC00';
+      ctxIuvwS.lineWidth = 2.4;
+      ctxIuvwS.stroke();
+      ctxIuvwS.beginPath();
+      ctxIuvwS.arc(alphaX, betaY, 4.5 * DPR(), 0, Math.PI * 2);
+      ctxIuvwS.fillStyle = '#FFCC00';
+      ctxIuvwS.fill();
+
+      // 회전 궤적
+      const f = Math.max(0, +pairs.freq.r.value);
+      if (f > 1e-6){
+        const T = 1/f;
+        const N = 720;
+        ctxIuvwS.beginPath();
+        for (let i=0; i<=N; i++){
+          const ti = t - T + (i/N)*T;
+          const [ui,vi,wi] = uvwAt(ti);
+          const [aa,bb] = clarke(ui,vi,wi);
+          const px = aa * S, py = -bb * S;
+          if (i===0) ctxIuvwS.moveTo(px,py); 
+          else ctxIuvwS.lineTo(px,py);
+        }
+        ctxIuvwS.strokeStyle = '#9dd7ff'; 
+        ctxIuvwS.lineWidth = 1.6; 
+        ctxIuvwS.stroke();
+      }
+
+      ctxIuvwS.restore();
+    }
+
+    function drawInvClarkTime(t){
+      const w = ctxIuvwT.canvas.width, h = ctxIuvwT.canvas.height; drawGrid(ctxIuvwT);
+      const N = 600;
+      const dt = (1/1200) / +pairs.tscale.r.value;
+      ctxIuvwT.lineWidth = 1.25; ctxIuvwT.strokeStyle = '#2b3c63';
+      ctxIuvwT.beginPath(); ctxIuvwT.moveTo(0, h/2); ctxIuvwT.lineTo(w, h/2); ctxIuvwT.stroke();
+
+      const colors = [COLOR_U, COLOR_V, COLOR_W];
+      [[0,'U'],[1,'V'],[2,'W']].forEach(([idx,label])=>{
+        ctxIuvwT.beginPath();
+        for(let i=0;i<N;i++){
+          const ti = t - (N-i)*dt;
+          const [u,v,wv] = uvwAt(ti);
+          const y = [u,v,wv][idx];
+          const px = (i/(N-1))*w; const py = h/2 - y * 60 * DPR();
+          if(i===0) ctxIuvwT.moveTo(px,py); else ctxIuvwT.lineTo(px,py);
+        }
+        ctxIuvwT.strokeStyle = colors[idx]; ctxIuvwT.lineWidth = 2; ctxIuvwT.stroke();
+      });
+    }
+
+      function drawInvClarke3D(t){
+      const wd = ctxIC3.canvas.width, h = ctxIC3.canvas.height;
+      ctxIC3.clearRect(0,0,wd,h);
+      
+      const cx = wd/2, cy = h/2;
+      ctxIC3.save();
+      ctxIC3.translate(cx,cy);
+      
+      const S = 70 * DPR();
+      const f = Math.max(0.001, +pairs.freq.r.value);
+      const cycles = Math.max(1, +pairs.cycles3D.r.value || 2);
+      
+      const totalCycles = cycles * 3;
+      const zStart = 0;
+      const zEnd = -totalCycles;
+      
+      // 현재 UVW 값 (역변환 결과)
+      const [u,v,w] = uvwAt(t);
+      const [a,b] = clarke(u,v,w);
+      
+      // Inv-Clarke: αβ → UVW
+      const u_inv = a;
+      const v_inv = -0.5*a + (Math.sqrt(3)/2)*b;
+      const w_inv = -0.5*a - (Math.sqrt(3)/2)*b;
+      
+      // 3D 좌표축
+      ctxIC3.strokeStyle = '#2b3c63';
+      ctxIC3.lineWidth = 1.5;
+      
+      // X축
+      let pX1 = project3D(-2, 0, 0);
+      let pX2 = project3D(2, 0, 0);
+      ctxIC3.beginPath();
+      ctxIC3.moveTo(pX1[0], -pX1[1]);
+      ctxIC3.lineTo(pX2[0], -pX2[1]);
+      ctxIC3.stroke();
+      
+      // Y축
+      let pY1 = project3D(0, -2, 0);
+      let pY2 = project3D(0, 2, 0);
+      ctxIC3.beginPath();
+      ctxIC3.moveTo(pY1[0], -pY1[1]);
+      ctxIC3.lineTo(pY2[0], -pY2[1]);
+      ctxIC3.stroke();
+      
+      // Z축 (시간)
+      let pZ1 = project3D(0, 0, zStart);
+      let pZ2 = project3D(0, 0, zEnd);
+      ctxIC3.beginPath();
+      ctxIC3.moveTo(pZ1[0], -pZ1[1]);
+      ctxIC3.lineTo(pZ2[0], -pZ2[1]);
+      ctxIC3.stroke();
+      
+      // 축 라벨
+      ctxIC3.fillStyle = '#cfe0ff';
+      ctxIC3.font = `${Math.round(12*DPR())}px ui-monospace, monospace`;
+      ctxIC3.fillText('U/V/W', pX2[0] + 10, -pX2[1]);
+      ctxIC3.fillText('amp', pY2[0] + 10, -pY2[1]);
+      ctxIC3.fillText('t', pZ2[0] + 10, -pZ2[1]);
+      
+      // XY 평면 (원형)
+      ctxIC3.fillStyle = 'rgba(100, 100, 100, 0.05)';
+      ctxIC3.strokeStyle = 'rgba(100, 100, 100, 0.2)';
+      const circleSteps = 60;
+      ctxIC3.beginPath();
+      for(let i = 0; i <= circleSteps; i++){
+        const angle = (i / circleSteps) * Math.PI * 2;
+        const x = Math.cos(angle) * 1.5;
+        const y = Math.sin(angle) * 1.5;
+        const p = project3D(x, y, 0);
+        if(i === 0) ctxIC3.moveTo(p[0], -p[1]);
+        else ctxIC3.lineTo(p[0], -p[1]);
+      }
+      ctxIC3.closePath();
+      ctxIC3.fill();
+      ctxIC3.stroke();
+      
+      // 3상 축 표시
+      const phaseAxes = [
+        {angle: 0, color: COLOR_U, label: 'U'},
+        {angle: 120, color: COLOR_V, label: 'V'},
+        {angle: 240, color: COLOR_W, label: 'W'}
+      ];
+      
+      phaseAxes.forEach(axis => {
+        const rad = axis.angle * Math.PI / 180;
+        const xAxis = Math.cos(rad) * 1.8;
+        const yAxis = Math.sin(rad) * 1.8;
+        
+        const p1 = project3D(0, 0, 0);
+        const p2 = project3D(xAxis, yAxis, 0);
+        
+        ctxIC3.strokeStyle = axis.color;
+        ctxIC3.lineWidth = 1;
+        ctxIC3.setLineDash([4, 4]);
+        ctxIC3.beginPath();
+        ctxIC3.moveTo(p1[0], -p1[1]);
+        ctxIC3.lineTo(p2[0], -p2[1]);
+        ctxIC3.stroke();
+        ctxIC3.setLineDash([]);
+        
+        ctxIC3.fillStyle = axis.color;
+        ctxIC3.fillText(axis.label, p2[0] + 10, -p2[1]);
+      });
+      
+      const N = 360 * totalCycles;
+      const timeRange = totalCycles / f;
+      
+      // U상 궤적 (역변환)
+      ctxIC3.strokeStyle = COLOR_U;
+      ctxIC3.lineWidth = 1.5;
+      ctxIC3.beginPath();
+      for(let i = 0; i <= N; i++){
+        const phase = (i/N);
+        const ti = t - timeRange * (1 - phase);
+        const [ui,vi,wi] = uvwAt(ti);
+        const [ai,bi] = clarke(ui,vi,wi);
+        
+        // Inv-Clarke for U
+        const ui_inv = ai;
+        const z = zStart + phase * (zEnd - zStart);
+        const xPos = ui_inv;
+        const yPos = 0;
+        
+        const p = project3D(xPos, -yPos, z);
+        if(i === 0) ctxIC3.moveTo(p[0], -p[1]);
+        else ctxIC3.lineTo(p[0], -p[1]);
+      }
+      ctxIC3.stroke();
+      
+      // V상 궤적 (역변환)
+      ctxIC3.strokeStyle = COLOR_V;
+      ctxIC3.lineWidth = 1.5;
+      ctxIC3.beginPath();
+      for(let i = 0; i <= N; i++){
+        const phase = (i/N);
+        const ti = t - timeRange * (1 - phase);
+        const [ui,vi,wi] = uvwAt(ti);
+        const [ai,bi] = clarke(ui,vi,wi);
+        
+        // Inv-Clarke for V
+        const vi_inv = -0.5*ai + (Math.sqrt(3)/2)*bi;
+        const z = zStart + phase * (zEnd - zStart);
+        const vAngle = 120 * Math.PI / 180;
+        const xPos = vi_inv * Math.cos(vAngle);
+        const yPos = vi_inv * Math.sin(vAngle);
+        
+        const p = project3D(xPos, -yPos, z);
+        if(i === 0) ctxIC3.moveTo(p[0], -p[1]);
+        else ctxIC3.lineTo(p[0], -p[1]);
+      }
+      ctxIC3.stroke();
+      
+      // W상 궤적 (역변환)
+      ctxIC3.strokeStyle = COLOR_W;
+      ctxIC3.lineWidth = 1.5;
+      ctxIC3.beginPath();
+      for(let i = 0; i <= N; i++){
+        const phase = (i/N);
+        const ti = t - timeRange * (1 - phase);
+        const [ui,vi,wi] = uvwAt(ti);
+        const [ai,bi] = clarke(ui,vi,wi);
+        
+        // Inv-Clarke for W
+        const wi_inv = -0.5*ai - (Math.sqrt(3)/2)*bi;
+        const z = zStart + phase * (zEnd - zStart);
+        const wAngle = 240 * Math.PI / 180;
+        const xPos = wi_inv * Math.cos(wAngle);
+        const yPos = wi_inv * Math.sin(wAngle);
+        
+        const p = project3D(xPos, -yPos, z);
+        if(i === 0) ctxIC3.moveTo(p[0], -p[1]);
+        else ctxIC3.lineTo(p[0], -p[1]);
+      }
+      ctxIC3.stroke();
+      
+      // 현재 시점의 벡터들
+      const currentZ = zStart;
+      
+      // U 벡터
+      const uX = u_inv;
+      const uY = 0;
+      const pU = project3D(uX, uY, currentZ);
+      const pO = project3D(0, 0, currentZ);
+      
+      ctxIC3.strokeStyle = COLOR_U;
+      ctxIC3.lineWidth = 2.5;
+      ctxIC3.beginPath();
+      ctxIC3.moveTo(pO[0], -pO[1]);
+      ctxIC3.lineTo(pU[0], -pU[1]);
+      ctxIC3.stroke();
+      
+      // V 벡터
+      const vAngle = 120 * Math.PI / 180;
+      const vX = v_inv * Math.cos(vAngle);
+      const vY = v_inv * Math.sin(vAngle);
+      const pV = project3D(vX, vY, currentZ);
+      
+      ctxIC3.strokeStyle = COLOR_V;
+      ctxIC3.lineWidth = 2.5;
+      ctxIC3.beginPath();
+      ctxIC3.moveTo(pO[0], -pO[1]);
+      ctxIC3.lineTo(pV[0], -pV[1]);
+      ctxIC3.stroke();
+      
+      // W 벡터
+      const wAngle = 240 * Math.PI / 180;
+      const wX = w_inv * Math.cos(wAngle);
+      const wY = w_inv * Math.sin(wAngle);
+      const pW = project3D(wX, wY, currentZ);
+      
+      ctxIC3.strokeStyle = COLOR_W;
+      ctxIC3.lineWidth = 2.5;
+      ctxIC3.beginPath();
+      ctxIC3.moveTo(pO[0], -pO[1]);
+      ctxIC3.lineTo(pW[0], -pW[1]);
+      ctxIC3.stroke();
+      
+      ctxIC3.restore();
+    }
+
+    function updateMath(t){
+      const [u,v,w] = uvwAt(t);
+      const [a,b] = clarke(u,v,w);
+      const k = '2/3';
+
+      const text = `Clarke 변환 (UVW → αβ)
+
+  [α]   =  ${k} × [  1   -1/2   -1/2 ] [u]
+  [β]           [  0   √3/2  -√3/2 ] [v]
+                                     [w]
+
+현재 시각 t=${t.toFixed(3)} s
+  u=${u.toFixed(3)}, v=${v.toFixed(3)}, w=${w.toFixed(3)} ${sumZero.checked? '(U+V+W=0 강제)':''}
+  α=${a.toFixed(4)}, β=${b.toFixed(4)}`;
+      $("matText").textContent = text;
+
+      const box = $("deltaBox");
+      if (deltaActive && deltaRef){
+        const du = (u-deltaRef.u).toFixed(3), dv=(v-deltaRef.v).toFixed(3), dw=(w-deltaRef.w).toFixed(3);
+        const da = (a-deltaRef.a).toFixed(4), db=(b-deltaRef.b).toFixed(4);
+        box.innerHTML = `<span>Δu=${du}</span><span>Δv=${dv}</span><span>Δw=${dw}</span><span>Δα=${da}</span><span>Δβ=${db}</span>`;
+      }
+    }
+
+    function updateMathPark(t){
+      const [u,v,w] = uvwAt(t); const [a,b] = clarke(u,v,w); const th = thetaE(t); const [d,q] = parkFromAlphaBeta(a,b,th);
+      const text = `Park 변환 (αβ→dq)
+
+  [d]   = [ cosθe   sinθe] [α]
+  [q]     [-sinθe   cosθe] [β]
+
+현재 시각 t=${t.toFixed(3)} s
+  θe=${(th*180/Math.PI).toFixed(1)}° (${th.toFixed(3)} rad)
+  α=${a.toFixed(3)}, β=${b.toFixed(3)}
+  d=${d.toFixed(4)}, q=${q.toFixed(4)}`;
+      const el = $("matPark"); if (el) el.textContent = text;
+    }
+
+    function updateMathUVW(t){
+      const [u,v,w] = uvwAt(t);
+      const text = `3상 전압 (시간영역)
+
+  u(t) = offU + ampU·sin(2πft + φU)
+  v(t) = offV + ampV·sin(2πft + φV)
+  w(t) = offW + ampW·sin(2πft + φW)
+
+현재 시각 t=${t.toFixed(3)} s
+  u=${u.toFixed(3)} V
+  v=${v.toFixed(3)} V
+  w=${w.toFixed(3)} V`;
+      const el = $("matUVW"); if (el) el.textContent = text;
+    }
+
+    // Update real-time values
+    function updateRealtimeValues(t){
+      const [u,v,w] = uvwAt(t);
+      const [a,b] = clarke(u,v,w);
+      const th = thetaE(t);
+      const [d,q] = parkFromAlphaBeta(a,b,th);
+      
+      if($("rtTime")) $("rtTime").textContent = t.toFixed(3);
+      if($("rtU")) $("rtU").textContent = u.toFixed(3);
+      if($("rtAlpha")) $("rtAlpha").textContent = a.toFixed(3);
+      if($("rtBeta")) $("rtBeta").textContent = b.toFixed(3);
+      if($("rtD")) $("rtD").textContent = d.toFixed(3);
+      if($("rtQ")) $("rtQ").textContent = q.toFixed(3);
+    }
+
+    function tick(now){
+      const tRunning = simTime(now);
+      const t = freeze.checked ? tHold : tRunning;
+      
+      drawWave(t);
+      drawUVWStatic(t);
+      drawUVW3D(t);
+
+      drawAlphaBetaTime(t);
+      drawAlphaBeta(t);
+      drawAlphaBeta3D(t);
+
+      drawParkTime(t);
+      drawParkStatic(t);
+      drawPark3D(t);
+
+      drawInvParkTime(t);
+      drawInvParkStatic(t);
+      drawInvPark3D(t);
+      
+      drawInvClarkTime(t);
+      drawInvClarkStatic(t);
+      drawInvClarke3D(t);
+      
+      updateMath(t);
+      updateMathUVW(t);
+      updateMathPark(t);
+      updateRealtimeValues(t);
+
+      requestAnimationFrame(tick);
+    }
+
+    // Initialize after DOM is ready
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>

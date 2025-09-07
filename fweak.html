@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flux Weakening 제어 시각화 - PMSM 모터</title>
+  <style>
+    :root {
+      --bg: #0b1220; --panel: #121a2b; --ink: #e6edf6; --muted:#9fb0ca; 
+      --accent:#4aa3ff; --grid:#23314f; --good:#FFCC00; --warn:#ffb020; --bad:#ff5d6c;
+      --flux:#9b59b6; --voltage:#3498db; --current:#e74c3c; --speed:#2ecc71;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { 
+      margin:0; 
+      background: var(--bg); 
+      color: var(--ink); 
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji; 
+    }
+    
+    header { 
+      padding: 16px 20px; 
+      border-bottom: 1px solid #18223a; 
+      position: sticky; 
+      top:0; 
+      background: linear-gradient(180deg,var(--bg),rgba(11,18,32,0.8)); 
+      backdrop-filter: blur(6px); 
+      z-index: 2; 
+    }
+    header h1 { margin: 0; font-size: 20px; letter-spacing: .2px; }
+    header p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+    .wrap { 
+      display: grid; 
+      grid-template-columns: 520px 1fr; 
+      gap: 16px; 
+      padding: 16px; 
+    }
+    @media (max-width: 1180px){ .wrap { grid-template-columns: 1fr; } }
+
+    .card { 
+      background: var(--panel); 
+      border: 1px solid #1a2540; 
+      border-radius: 14px; 
+      padding: 14px; 
+      box-shadow: 0 8px 24px rgba(0,0,0,.35); 
+    }
+    .card h2 { margin: 0 0 8px; font-size: 16px; letter-spacing:.2px; }
+
+    .info-panel {
+      background: linear-gradient(135deg, #1a2540 0%, #121a2b 100%);
+      border: 1px solid #2b3c63;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .info-panel h3 { 
+      margin: 0 0 8px; 
+      font-size: 14px; 
+      color: #4aa3ff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .info-panel p { 
+      margin: 4px 0; 
+      font-size: 12px; 
+      color: #cfe0ff;
+      line-height: 1.5;
+    }
+
+    .row { 
+      display: grid; 
+      grid-template-columns: 1.3fr 2fr 110px 84px; 
+      align-items: center; 
+      gap: 10px; 
+      margin: 10px 0; 
+    }
+    .row label { font-size: 13px; color: var(--muted); }
+    .row input[type="range"] { width: 100%; }
+    .row input[type="number"] { 
+      width: 100%; 
+      background:#0f162a; 
+      color:var(--ink); 
+      border:1px solid #1c2a49; 
+      border-radius: 8px; 
+      padding:6px 8px; 
+      font-size:12px; 
+    }
+    .row button { 
+      width: 84px; 
+      background:#0e172b; 
+      border:1px solid #203156; 
+      color:#cfe0ff; 
+      border-radius:8px; 
+      padding:6px 8px; 
+      cursor:pointer; 
+      font-size:12px; 
+      transition: all 0.2s; 
+    }
+    .row button:hover { 
+      filter: brightness(1.12); 
+      transform: translateY(-1px); 
+    }
+
+    .pill { 
+      display:inline-flex; 
+      align-items:center; 
+      gap:8px; 
+      padding:8px 10px; 
+      border-radius: 999px; 
+      background:#0f1628; 
+      border:1px solid #1c2a49; 
+      font-size: 12px; 
+      color: var(--muted); 
+      transition: all 0.2s; 
+      cursor: pointer; 
+    }
+    .pill:hover { 
+      background:#121a2e; 
+      border-color:#2a3a5f; 
+    }
+    .pill input { 
+      transform: translateY(1px); 
+      cursor: pointer; 
+    }
+
+    .grid-viz { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); 
+      gap: 16px; 
+    }
+    
+    .canvas-card { 
+      position: relative; 
+    }
+    canvas { 
+      width: 100%; 
+      height: 320px; 
+      border-radius: 12px; 
+      background: #0b1220; 
+      display:block; 
+    }
+    .caption { 
+      position:absolute; 
+      top:10px; 
+      left:12px; 
+      font-size: 12px; 
+      color: var(--muted); 
+      background: rgba(10,16,28,.8); 
+      padding:4px 8px; 
+      border-radius: 999px; 
+      border:1px solid #213154; 
+      backdrop-filter: blur(4px); 
+    }
+
+    .badge { 
+      font-size: 11px; 
+      color:#cfe0ff; 
+      padding: 4px 6px; 
+      border-radius: 6px; 
+      border:1px solid #203156; 
+      background:#0e172b; 
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+    
+    .status-item {
+      background: #0c1425;
+      border: 1px solid #1b2949;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    
+    .status-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    
+    .status-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--good);
+    }
+    
+    .realtime-value {
+      animation: pulse 2s infinite;
+      color: var(--good);
+      font-weight: 600;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      cursor: help;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 240px;
+      background-color: #1a2540;
+      color: #cfe0ff;
+      text-align: left;
+      border-radius: 8px;
+      padding: 8px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -120px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 11px;
+      border: 1px solid #2b3c63;
+    }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+    
+    .mode-indicator {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .mode-mtpa {
+      background: rgba(46, 204, 113, 0.2);
+      border: 1px solid #2ecc71;
+      color: #2ecc71;
+    }
+    .mode-fw {
+      background: rgba(155, 89, 182, 0.2);
+      border: 1px solid #9b59b6;
+      color: #9b59b6;
+    }
+    .mode-mtpv {
+      background: rgba(52, 152, 219, 0.2);
+      border: 1px solid #3498db;
+      color: #3498db;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>⚡ Flux Weakening 제어 시각화 - PMSM 모터</h1>
+    <p>고속 영역에서의 <span class="badge">MTPA</span> → <span class="badge">Flux Weakening</span> → <span class="badge">MTPV</span> 전환 과정을 실시간으로 확인하세요.</p>
+  </header>
+
+  <div class="wrap">
+    <!-- Controls -->
+    <section class="card">
+      <h2>🎛️ 모터 파라미터</h2>
+
+      <div class="info-panel">
+        <h3>💡 Flux Weakening이란?</h3>
+        <p>• 모터가 기저속도를 초과할 때 자속을 약화시켜 고속 운전을 가능하게 하는 제어 기법입니다.</p>
+        <p>• 전압 제한 원과 전류 제한 원 내에서 최적 운전점을 찾습니다.</p>
+        <p>• MTPA: Maximum Torque Per Ampere (최대 토크/전류)</p>
+        <p>• MTPV: Maximum Torque Per Volt (최대 토크/전압)</p>
+      </div>
+
+      <div class="row">
+        <label class="tooltip">정격 전압 Vdc [V]
+          <span class="tooltiptext">인버터 DC 링크 전압입니다. 모터에 인가 가능한 최대 전압을 결정합니다.</span>
+        </label>
+        <input id="vdc" type="range" min="100" max="800" step="10" value="400" />
+        <input id="vdc_num" type="number" step="10" />
+        <button id="vdc_reset">기본값</button>
+      </div>
+
+      <div class="row">
+        <label class="tooltip">정격 전류 Imax [A]
+          <span class="tooltiptext">모터와 인버터의 최대 허용 전류입니다.</span>
+        </label>
+        <input id="imax" type="range" min="10" max="200" step="5" value="100" />
+        <input id="imax_num" type="number" step="5" />
+        <button id="imax_reset">기본값</button>
+      </div>
+
+      <div class="row">
+        <label class="tooltip">영구자석 자속 λm [Wb]
+          <span class="tooltiptext">영구자석에 의한 쇄교자속입니다.</span>
+        </label>
+        <input id="lambda_m" type="range" min="0.01" max="0.5" step="0.01" value="0.175" />
+        <input id="lambda_m_num" type="number" step="0.01" />
+        <button id="lambda_m_reset">기본값</button>
+      </div>
+
+      <div class="row">
+        <label class="tooltip">d축 인덕턴스 Ld [mH]
+          <span class="tooltiptext">d축 (자속) 방향의 인덕턴스입니다.</span>
+        </label>
+        <input id="ld" type="range" min="0.1" max="10" step="0.1" value="2.5" />
+        <input id="ld_num" type="number" step="0.1" />
+        <button id="ld_reset">기본값</button>
+      </div>
+
+      <div class="row">
+        <label class="tooltip">q축 인덕턴스 Lq [mH]
+          <span class="tooltiptext">q축 (토크) 방향의 인덕턴스입니다.</span>
+        </label>
+        <input id="lq" type="range" min="0.1" max="10" step="0.1" value="5.0" />
+        <input id="lq_num" type="number" step="0.1" />
+        <button id="lq_reset">기본값</button>
+      </div>
+
+      <div class="row">
+        <label class="tooltip">모터 속도 ω [rpm]
+          <span class="tooltiptext">모터의 회전 속도입니다. 기저속도 이상에서 Flux Weakening이 시작됩니다.</span>
+        </label>
+        <input id="speed" type="range" min="0" max="10000" step="100" value="3000" />
+        <input id="speed_num" type="number" step="100" />
+        <button id="speed_reset">기본값</button>
+      </div>
+
+      <div class="row">
+        <label class="tooltip">요구 토크 T* [Nm]
+          <span class="tooltiptext">모터에 요구되는 토크입니다.</span>
+        </label>
+        <input id="torque_ref" type="range" min="0" max="100" step="1" value="50" />
+        <input id="torque_ref_num" type="number" step="1" />
+        <button id="torque_ref_reset">기본값</button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #1a2540;margin:14px 0;">
+      
+      <h2>⚙️ 제어 옵션</h2>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">
+        <label class="pill tooltip">
+          <input id="autoMode" type="checkbox" checked /> 자동 모드 전환
+          <span class="tooltiptext">속도에 따라 MTPA/FW/MTPV 모드를 자동 전환합니다</span>
+        </label>
+        <label class="pill tooltip">
+          <input id="showLimits" type="checkbox" checked /> 제한원 표시
+          <span class="tooltiptext">전압/전류 제한원을 표시합니다</span>
+        </label>
+        <label class="pill tooltip">
+          <input id="animate" type="checkbox" checked /> 애니메이션
+          <span class="tooltiptext">실시간 애니메이션을 활성화합니다</span>
+        </label>
+      </div>
+
+      <!-- Status Display -->
+      <div class="info-panel" style="margin-top: 14px;">
+        <h3>📊 실시간 상태
+          <span id="modeIndicator" class="mode-indicator mode-mtpa">MTPA</span>
+        </h3>
+        <div class="status-grid">
+          <div class="status-item">
+            <div class="status-label">d축 전류</div>
+            <div class="status-value" id="id_value">0.0 A</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">q축 전류</div>
+            <div class="status-value" id="iq_value">0.0 A</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">전압 크기</div>
+            <div class="status-value" id="v_mag">0.0 V</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">출력 토크</div>
+            <div class="status-value" id="torque_out">0.0 Nm</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">기저 속도</div>
+            <div class="status-value" id="base_speed">0 rpm</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">전압 여유</div>
+            <div class="status-value" id="v_margin">100 %</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visualizations -->
+    <section>
+      <div class="grid-viz">
+        <!-- Current Vector Diagram -->
+        <div class="card canvas-card">
+          <div class="caption">dq 전류 벡터 & 제한원</div>
+          <canvas id="currentVector"></canvas>
+        </div>
+
+        <!-- Torque-Speed Characteristic -->
+        <div class="card canvas-card">
+          <div class="caption">토크-속도 특성</div>
+          <canvas id="torqueSpeed"></canvas>
+        </div>
+
+        <!-- Voltage Circle -->
+        <div class="card canvas-card">
+          <div class="caption">전압 벡터 & 육각형 제한</div>
+          <canvas id="voltageHex"></canvas>
+        </div>
+
+        <!-- Control Trajectory -->
+        <div class="card canvas-card">
+          <div class="caption">제어 궤적 (MTPA → FW → MTPV)</div>
+          <canvas id="trajectory"></canvas>
+        </div>
+
+        <!-- Flux Linkage -->
+        <div class="card canvas-card">
+          <div class="caption">자속 벡터 다이어그램</div>
+          <canvas id="fluxVector"></canvas>
+        </div>
+
+        <!-- Efficiency Map -->
+        <div class="card canvas-card">
+          <div class="caption">효율 맵</div>
+          <canvas id="efficiency"></canvas>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Utilities
+    const $ = (id) => document.getElementById(id);
+    const DPR = () => (window.devicePixelRatio || 1);
+
+    // Colors
+    const COLOR_D = '#ff5d6c';
+    const COLOR_Q = '#4aa3ff';
+    const COLOR_VOLTAGE = '#3498db';
+    const COLOR_CURRENT = '#e74c3c';
+    const COLOR_FLUX = '#9b59b6';
+    const COLOR_MTPA = '#2ecc71';
+    const COLOR_FW = '#9b59b6';
+    const COLOR_MTPV = '#3498db';
+
+    // Parameters with defaults
+    const defaults = {
+      vdc: 400,
+      imax: 100,
+      lambda_m: 0.175,
+      ld: 2.5,
+      lq: 5.0,
+      speed: 3000,
+      torque_ref: 50
+    };
+
+    // Bind controls
+    function bindControl(id) {
+      const range = $(id);
+      const num = $(id + "_num");
+      const reset = $(id + "_reset");
+      
+      if (!range || !num || !reset) return null;
+      
+      num.value = range.value;
+      
+      range.addEventListener('input', () => {
+        num.value = range.value;
+        updateCalculations();
+      });
+      
+      num.addEventListener('input', () => {
+        range.value = num.value;
+        updateCalculations();
+      });
+      
+      reset.addEventListener('click', () => {
+        range.value = defaults[id];
+        num.value = defaults[id];
+        updateCalculations();
+      });
+      
+      return { range, num };
+    }
+
+    // Initialize controls
+    const controls = {};
+    Object.keys(defaults).forEach(key => {
+      controls[key] = bindControl(key);
+    });
+
+    // Canvas setup
+    const canvases = {};
+    ['currentVector', 'torqueSpeed', 'voltageHex', 'trajectory', 'fluxVector', 'efficiency'].forEach(id => {
+      const canvas = $(id);
+      const ctx = canvas.getContext('2d');
+      canvases[id] = { canvas, ctx };
+    });
+
+    function resizeCanvases() {
+      const ratio = DPR();
+      Object.values(canvases).forEach(({ canvas }) => {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = Math.floor(rect.width * ratio);
+        canvas.height = Math.floor(rect.height * ratio);
+      });
+    }
+
+    // Physics calculations
+    function calculateBaseSpeed() {
+      const Vdc = +controls.vdc.range.value;
+      const lambda_m = +controls.lambda_m.range.value;
+      const Vmax = Vdc / Math.sqrt(3); // Maximum phase voltage
+      const omega_base = Vmax / lambda_m / (2 * Math.PI / 60); // Convert to RPM
+      return omega_base;
+    }
+
+    function calculateCurrents() {
+      const speed = +controls.speed.range.value;
+      const torque_ref = +controls.torque_ref.range.value;
+      const Imax = +controls.imax.range.value;
+      const Ld = +controls.ld.range.value / 1000; // mH to H
+      const Lq = +controls.lq.range.value / 1000;
+      const lambda_m = +controls.lambda_m.range.value;
+      
+      const base_speed = calculateBaseSpeed();
+      
+      let id, iq, mode;
+      
+      if (speed <= base_speed) {
+        // MTPA mode
+        mode = 'MTPA';
+        if (Ld === Lq) {
+          // SPM motor
+          id = 0;
+          iq = torque_ref / (1.5 * lambda_m);
+        } else {
+          // IPM motor - simplified MTPA
+          const beta = Math.atan(lambda_m / (4 * (Lq - Ld) * Imax));
+          const Is = Math.min(torque_ref / (1.5 * lambda_m * Math.sin(beta)), Imax);
+          id = -Is * Math.sin(beta);
+          iq = Is * Math.cos(beta);
+        }
+      } else if (speed <= base_speed * 2) {
+        // Flux Weakening mode
+        mode = 'FW';
+        const omega = speed * 2 * Math.PI / 60;
+        const Vmax = +controls.vdc.range.value / Math.sqrt(3);
+        
+        // Simplified flux weakening
+        const flux_ref = Vmax / omega;
+        id = -(flux_ref - lambda_m) / Ld;
+        iq = Math.sqrt(Math.max(0, Imax * Imax - id * id));
+      } else {
+        // MTPV mode
+        mode = 'MTPV';
+        id = -lambda_m / Ld;
+        iq = Math.sqrt(Math.max(0, Imax * Imax - id * id));
+      }
+      
+      // Limit currents
+      const I_mag = Math.sqrt(id * id + iq * iq);
+      if (I_mag > Imax) {
+        id = id * Imax / I_mag;
+        iq = iq * Imax / I_mag;
+      }
+      
+      return { id, iq, mode };
+    }
+
+    function drawCurrentVector() {
+      const { canvas, ctx } = canvases.currentVector;
+      const w = canvas.width, h = canvas.height;
+      
+      ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      ctx.translate(w/2, h/2);
+      
+      const scale = Math.min(w, h) / 3 / (+controls.imax.range.value);
+      
+      // Draw axes
+      ctx.strokeStyle = '#2b3c63';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-w/2, 0);
+      ctx.lineTo(w/2, 0);
+      ctx.moveTo(0, -h/2);
+      ctx.lineTo(0, h/2);
+      ctx.stroke();
+      
+      // Draw current limit circle
+      if ($('showLimits').checked) {
+        ctx.strokeStyle = COLOR_CURRENT;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(0, 0, +controls.imax.range.value * scale, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      
+      // Calculate and draw voltage limit ellipse
+      const speed = +controls.speed.range.value;
+      const omega = speed * 2 * Math.PI / 60;
+      const Vmax = +controls.vdc.range.value / Math.sqrt(3);
+      const Ld = +controls.ld.range.value / 1000;
+      const Lq = +controls.lq.range.value / 1000;
+      const lambda_m = +controls.lambda_m.range.value;
+      
+      if ($('showLimits').checked && omega > 0) {
+        ctx.strokeStyle = COLOR_VOLTAGE;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        
+        // Voltage limit ellipse (simplified)
+        const a = Vmax / (omega * Ld);
+        const b = Vmax / (omega * Lq);
+        const cx = -lambda_m / Ld;
+        
+        for (let angle = 0; angle <= Math.PI * 2; angle += 0.1) {
+          const x = cx + a * Math.cos(angle);
+          const y = b * Math.sin(angle);
+          const px = x * scale;
+          const py = -y * scale;
+          if (angle === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      
+      // Draw current vector
+      const { id, iq, mode } = calculateCurrents();
+      const px = id * scale;
+      const py = -iq * scale;
+      
+      ctx.strokeStyle = '#FFCC00';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      
+      ctx.fillStyle = '#FFCC00';
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Labels
+      ctx.fillStyle = COLOR_D;
+      ctx.font = `${12 * DPR()}px monospace`;
+      ctx.fillText('id', w/2 - 30, -8);
+      
+      ctx.fillStyle = COLOR_Q;
+      ctx.fillText('iq', 8, -h/2 + 20);
+      
+      ctx.restore();
+    }
+
+    function updateCalculations() {
+      const { id, iq, mode } = calculateCurrents();
+      const base_speed = calculateBaseSpeed();
+      
+      // Update display
+      $('id_value').textContent = id.toFixed(1) + ' A';
+      $('iq_value').textContent = iq.toFixed(1) + ' A';
+      $('base_speed').textContent = Math.round(base_speed) + ' rpm';
+      
+      // Calculate voltage magnitude
+      const omega = +controls.speed.range.value * 2 * Math.PI / 60;
+      const Ld = +controls.ld.range.value / 1000;
+      const Lq = +controls.lq.range.value / 1000;
+      const lambda_m = +controls.lambda_m.range.value;
+      
+      const vd = -omega * Lq * iq;
+      const vq = omega * (lambda_m + Ld * id);
+      const v_mag = Math.sqrt(vd * vd + vq * vq);
+      const v_max = +controls.vdc.range.value / Math.sqrt(3);
+      
+      $('v_mag').textContent = v_mag.toFixed(1) + ' V';
+      $('v_margin').textContent = Math.max(0, (100 * (1 - v_mag / v_max))).toFixed(0) + ' %';
+      
+      // Calculate torque
+      const torque = 1.5 * (lambda_m * iq + (Ld - Lq) * id * iq);
+      $('torque_out').textContent = torque.toFixed(1) + ' Nm';
+      
+      // Update mode indicator
+      const indicator = $('modeIndicator');
+      indicator.textContent = mode;
+      indicator.className = 'mode-indicator mode-' + mode.toLowerCase();
+      
+      // Redraw canvases
+      drawCurrentVector();
+    }
+
+    // Animation loop
+    let animationId = null;
+    function animate() {
+      if ($('animate').checked) {
+        updateCalculations();
+        animationId = requestAnimationFrame(animate);
+      }
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      resizeCanvases();
+      updateCalculations();
+      animate();
+    });
+    
+    window.addEventListener('resize', resizeCanvases);
+    
+    $('animate').addEventListener('change', () => {
+      if ($('animate').checked) {
+        animate();
+      } else if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+    });
+
+// Additional visualization functions
+    
+    function drawTorqueSpeed() {
+      const { canvas, ctx } = canvases.torqueSpeed;
+      const w = canvas.width, h = canvas.height;
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      // Draw axes
+      ctx.strokeStyle = '#2b3c63';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(40, h - 30);
+      ctx.lineTo(w - 20, h - 30);
+      ctx.moveTo(40, 20);
+      ctx.lineTo(40, h - 30);
+      ctx.stroke();
+      
+      // Calculate characteristic curve
+      const base_speed = calculateBaseSpeed();
+      const max_speed = 10000;
+      const max_torque = 100;
+      
+      // Draw MTPA region
+      ctx.fillStyle = 'rgba(46, 204, 113, 0.1)';
+      ctx.fillRect(40, 20, (base_speed / max_speed) * (w - 60), h - 50);
+      
+      // Draw FW region
+      ctx.fillStyle = 'rgba(155, 89, 182, 0.1)';
+      ctx.fillRect(40 + (base_speed / max_speed) * (w - 60), 20, 
+                   (base_speed / max_speed) * (w - 60), h - 50);
+      
+      // Draw MTPV region
+      ctx.fillStyle = 'rgba(52, 152, 219, 0.1)';
+      ctx.fillRect(40 + (2 * base_speed / max_speed) * (w - 60), 20,
+                   w - 60 - (2 * base_speed / max_speed) * (w - 60), h - 50);
+      
+      // Draw torque-speed curve
+      ctx.strokeStyle = '#FFCC00';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      
+      for (let speed = 0; speed <= max_speed; speed += 100) {
+        const x = 40 + (speed / max_speed) * (w - 60);
+        let torque;
+        
+        if (speed <= base_speed) {
+          torque = max_torque;
+        } else if (speed <= 2 * base_speed) {
+          torque = max_torque * (base_speed / speed);
+        } else {
+          torque = max_torque * Math.pow(base_speed / speed, 2);
+        }
+        
+        const y = h - 30 - (torque / max_torque) * (h - 50);
+        
+        if (speed === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      
+      // Draw current operating point
+      const current_speed = +controls.speed.range.value;
+      const { id, iq } = calculateCurrents();
+      const Ld = +controls.ld.range.value / 1000;
+      const Lq = +controls.lq.range.value / 1000;
+      const lambda_m = +controls.lambda_m.range.value;
+      const torque = 1.5 * (lambda_m * iq + (Ld - Lq) * id * iq);
+      
+      const op_x = 40 + (current_speed / max_speed) * (w - 60);
+      const op_y = h - 30 - (torque / max_torque) * (h - 50);
+      
+      ctx.fillStyle = '#FFCC00';
+      ctx.beginPath();
+      ctx.arc(op_x, op_y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Labels
+      ctx.fillStyle = '#cfe0ff';
+      ctx.font = `${11 * DPR()}px monospace`;
+      ctx.fillText('Speed (rpm)', w/2 - 30, h - 5);
+      ctx.save();
+      ctx.translate(15, h/2);
+      ctx.rotate(-Math.PI/2);
+      ctx.fillText('Torque (Nm)', 0, 0);
+      ctx.restore();
+      
+      // Region labels
+      ctx.font = `${10 * DPR()}px monospace`;
+      ctx.fillStyle = COLOR_MTPA;
+      ctx.fillText('MTPA', 40 + (base_speed / max_speed / 2) * (w - 60), 35);
+      ctx.fillStyle = COLOR_FW;
+      ctx.fillText('FW', 40 + (1.5 * base_speed / max_speed) * (w - 60), 35);
+      ctx.fillStyle = COLOR_MTPV;
+      ctx.fillText('MTPV', 40 + (2.5 * base_speed / max_speed) * (w - 60), 35);
+    }
+    
+    function drawVoltageHexagon() {
+      const { canvas, ctx } = canvases.voltageHex;
+      const w = canvas.width, h = canvas.height;
+      
+      ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      ctx.translate(w/2, h/2);
+      
+      const Vdc = +controls.vdc.range.value;
+      const scale = Math.min(w, h) / 3 / Vdc;
+      
+      // Draw axes
+      ctx.strokeStyle = '#2b3c63';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-w/2, 0);
+      ctx.lineTo(w/2, 0);
+      ctx.moveTo(0, -h/2);
+      ctx.lineTo(0, h/2);
+      ctx.stroke();
+      
+      // Draw voltage hexagon (six-step)
+      ctx.strokeStyle = COLOR_VOLTAGE;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = i * Math.PI / 3;
+        const x = (2 * Vdc / 3) * Math.cos(angle) * scale;
+        const y = (2 * Vdc / 3) * Math.sin(angle) * scale;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Draw voltage circle (SVPWM)
+      ctx.strokeStyle = COLOR_VOLTAGE;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, Vdc / Math.sqrt(3) * scale, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Draw current voltage vector
+      const { id, iq } = calculateCurrents();
+      const omega = +controls.speed.range.value * 2 * Math.PI / 60;
+      const Ld = +controls.ld.range.value / 1000;
+      const Lq = +controls.lq.range.value / 1000;
+      const lambda_m = +controls.lambda_m.range.value;
+      
+      const vd = -omega * Lq * iq;
+      const vq = omega * (lambda_m + Ld * id);
+      
+      const px = vd * scale;
+      const py = -vq * scale;
+      
+      ctx.strokeStyle = '#FFCC00';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      
+      ctx.fillStyle = '#FFCC00';
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Labels
+      ctx.fillStyle = COLOR_D;
+      ctx.font = `${12 * DPR()}px monospace`;
+      ctx.fillText('vd', w/2 - 30, -8);
+      
+      ctx.fillStyle = COLOR_Q;
+      ctx.fillText('vq', 8, -h/2 + 20);
+      
+      ctx.restore();
+    }
+    
+    function drawTrajectory() {
+      const { canvas, ctx } = canvases.trajectory;
+      const w = canvas.width, h = canvas.height;
+      
+      ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      ctx.translate(w/2, h/2);
+      
+      const Imax = +controls.imax.range.value;
+      const scale = Math.min(w, h) / 3 / Imax;
+      
+      // Draw axes
+      ctx.strokeStyle = '#2b3c63';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-w/2, 0);
+      ctx.lineTo(w/2, 0);
+      ctx.moveTo(0, -h/2);
+      ctx.lineTo(0, h/2);
+      ctx.stroke();
+      
+      // Draw current limit
+      ctx.strokeStyle = COLOR_CURRENT;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.arc(0, 0, Imax * scale, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Draw MTPA trajectory
+      const Ld = +controls.ld.range.value / 1000;
+      const Lq = +controls.lq.range.value / 1000;
+      const lambda_m = +controls.lambda_m.range.value;
+      
+      ctx.strokeStyle = COLOR_MTPA;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      
+      if (Math.abs(Ld - Lq) > 0.0001) {
+        // IPM motor - MTPA curve
+        for (let Is = 0; Is <= Imax; Is += Imax/50) {
+          const beta = Math.atan(lambda_m / (4 * (Lq - Ld) * Is));
+          const id = -Is * Math.sin(beta);
+          const iq = Is * Math.cos(beta);
+          const px = id * scale;
+          const py = -iq * scale;
+          if (Is === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+      } else {
+        // SPM motor - vertical line
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -Imax * scale);
+      }
+      ctx.stroke();
+      
+      // Draw constant torque curves
+      ctx.strokeStyle = 'rgba(255, 204, 0, 0.3)';
+      ctx.lineWidth = 1;
+      for (let T = 20; T <= 100; T += 20) {
+        ctx.beginPath();
+        for (let id = -Imax; id <= 0; id += Imax/50) {
+          const iq_squared = Math.pow(T / (1.5 * lambda_m), 2) - 
+                            Math.pow((Lq - Ld) * id / lambda_m, 2);
+          if (iq_squared >= 0) {
+            const iq = Math.sqrt(iq_squared);
+            const px = id * scale;
+            const py = -iq * scale;
+            if (id === -Imax) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+        }
+        ctx.stroke();
+      }
+      
+      // Draw current operating point
+      const { id, iq } = calculateCurrents();
+      const px = id * scale;
+      const py = -iq * scale;
+      
+      ctx.fillStyle = '#FFCC00';
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Labels
+      ctx.fillStyle = COLOR_D;
+      ctx.font = `${12 * DPR()}px monospace`;
+      ctx.fillText('id', w/2 - 30, -8);
+      
+      ctx.fillStyle = COLOR_Q;
+      ctx.fillText('iq', 8, -h/2 + 20);
+      
+      ctx.restore();
+    }
+    
+    function drawFluxVector() {
+      const { canvas, ctx } = canvases.fluxVector;
+      const w = canvas.width, h = canvas.height;
+      
+      ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      ctx.translate(w/2, h/2);
+      
+      const lambda_m = +controls.lambda_m.range.value;
+      const scale = Math.min(w, h) / 3 / (lambda_m * 2);
+      
+      // Draw axes
+      ctx.strokeStyle = '#2b3c63';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-w/2, 0);
+      ctx.lineTo(w/2, 0);
+      ctx.moveTo(0, -h/2);
+      ctx.lineTo(0, h/2);
+      ctx.stroke();
+      
+      // Calculate flux components
+      const { id, iq } = calculateCurrents();
+      const Ld = +controls.ld.range.value / 1000;
+      const Lq = +controls.lq.range.value / 1000;
+      
+      const lambda_d = lambda_m + Ld * id;
+      const lambda_q = Lq * iq;
+      
+      // Draw PM flux
+      ctx.strokeStyle = COLOR_FLUX;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(lambda_m * scale, 0);
+      ctx.stroke();
+      
+      ctx.fillStyle = COLOR_FLUX;
+      ctx.beginPath();
+      ctx.arc(lambda_m * scale, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw total flux
+      const px = lambda_d * scale;
+      const py = -lambda_q * scale;
+      
+      ctx.strokeStyle = '#FFCC00';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      
+      ctx.fillStyle = '#FFCC00';
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw components
+      ctx.strokeStyle = COLOR_D;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(px, 0);
+      ctx.stroke();
+      
+      ctx.strokeStyle = COLOR_Q;
+      ctx.beginPath();
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Labels
+      ctx.fillStyle = COLOR_FLUX;
+      ctx.font = `${11 * DPR()}px monospace`;
+      ctx.fillText('λm', lambda_m * scale / 2, -10);
+      
+      ctx.fillStyle = COLOR_D;
+      ctx.fillText('λd', px / 2, 15);
+      
+      ctx.fillStyle = COLOR_Q;
+      ctx.fillText('λq', px + 10, py / 2);
+      
+      ctx.restore();
+    }
+    
+    function drawEfficiency() {
+      const { canvas, ctx } = canvases.efficiency;
+      const w = canvas.width, h = canvas.height;
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      // Create efficiency heatmap
+      const Imax = +controls.imax.range.value;
+      const gridSize = 50;
+      const cellWidth = w / gridSize;
+      const cellHeight = h / gridSize;
+      
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          const id = -Imax + (2 * Imax * i / gridSize);
+          const iq = Imax - (2 * Imax * j / gridSize);
+          
+          // Simple efficiency calculation (placeholder)
+          const I_mag = Math.sqrt(id * id + iq * iq);
+          const efficiency = I_mag > Imax ? 0 : 
+                            0.95 * (1 - 0.2 * Math.pow(I_mag / Imax, 2));
+          
+          // Color based on efficiency
+          const hue = efficiency * 120; // 0 (red) to 120 (green)
+          ctx.fillStyle = `hsl(${hue}, 70%, ${40 + efficiency * 20}%)`;
+          ctx.fillRect(i * cellWidth, j * cellHeight, cellWidth, cellHeight);
+        }
+      }
+      
+      // Draw current operating point
+      const { id, iq } = calculateCurrents();
+      const px = ((id + Imax) / (2 * Imax)) * w;
+      const py = ((Imax - iq) / (2 * Imax)) * h;
+      
+      ctx.strokeStyle = '#FFCC00';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(px, py, 8, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      ctx.fillStyle = 'rgba(255, 204, 0, 0.5)';
+      ctx.fill();
+      
+      // Labels
+      ctx.fillStyle = '#cfe0ff';
+      ctx.font = `${11 * DPR()}px monospace`;
+      ctx.fillText('-id →', 10, h - 5);
+      ctx.fillText('iq ↑', 10, 20);
+      
+      ctx.restore();
+    }
+    
+    // Update all visualizations
+    function updateVisualizations() {
+      drawCurrentVector();
+      drawTorqueSpeed();
+      drawVoltageHexagon();
+      drawTrajectory();
+      drawFluxVector();
+      drawEfficiency();
+    }
+    
+    // Override updateCalculations to call all visualizations
+    const originalUpdate = updateCalculations;
+    updateCalculations = function() {
+      originalUpdate();
+      updateVisualizations();
+    };
+  </script>
+</body>
+</html></parameter>
+</invoke>
